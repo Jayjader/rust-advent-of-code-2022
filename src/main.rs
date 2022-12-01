@@ -1,6 +1,8 @@
 extern crate core;
 
 use std::fs;
+use std::iter::Map;
+use std::str::Split;
 
 enum Part {
     One,
@@ -18,33 +20,34 @@ impl TryInto<Part> for usize {
         }
     }
 }
+
 /// solve problem for day 1
 fn day1(input: &str, part: Part) -> usize {
     /// Takes a list of inventories, separated by blank lies, of calories, separated by newlines, as input.
+    /// Returns an iterator over the sum of each inventory.
+    /// (common sub-problem for both parts of day 1)
+    fn parse_inventory_totals(input: &str) -> Map<Split<&str>, fn(&str) -> usize> {
+        input.split("\n\n").map(|inventory_as_string| {
+            inventory_as_string
+                .split('\n')
+                .filter_map(|calories| calories.parse::<usize>().ok())
+                .sum::<usize>()
+        })
+    }
+
+    /// Takes a list of inventories, separated by blank lies, of calories, separated by newlines, as input.
     /// Returns the sum of the one containing the most calories.
     fn part1(input: &str) -> usize {
-        input
-            .split("\n\n")
-            .map(|inventory_as_string| {
-                inventory_as_string
-                    .split('\n')
-                    .filter_map(|calories| calories.parse::<usize>().ok())
-                    .sum::<usize>()
-            })
+        parse_inventory_totals(input)
             .max()
-            .unwrap()
+            .expect("couldn't calculate max!")
     }
 
     /// Takes a list of inventories, separated by blank lies, of calories, separated by newlines, as input.
     /// Returns the top 3 largest inventory sums.
     fn part2(input: &str) -> usize {
         let mut max = [0, 0, 0];
-        for calories in input.split("\n\n").map(|inventory_as_string| {
-            inventory_as_string
-                .split('\n')
-                .filter_map(|calories| calories.parse::<usize>().ok())
-                .sum::<usize>()
-        }) {
+        for calories in parse_inventory_totals(input) {
             if calories > max[0] {
                 max[0] = calories;
                 max.sort();
