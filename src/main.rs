@@ -38,16 +38,19 @@ fn day1(input: &str, part: Part) -> usize {
     /// Takes a list of inventories, separated by blank lies, of calories, separated by newlines, as input.
     /// Returns the top 3 largest inventory sums.
     fn part2(input: &str) -> usize {
-        input
-            .split("\n\n")
-            .map(|inventory_as_string| {
-                inventory_as_string
-                    .split('\n')
-                    .filter_map(|calories| calories.parse::<usize>().ok())
-                    .sum::<usize>()
-            })
-            .max()
-            .unwrap()
+        let mut max = [0, 0, 0];
+        for calories in input.split("\n\n").map(|inventory_as_string| {
+            inventory_as_string
+                .split('\n')
+                .filter_map(|calories| calories.parse::<usize>().ok())
+                .sum::<usize>()
+        }) {
+            if calories > max[0] {
+                max[0] = calories;
+                max.sort();
+            }
+        }
+        max.iter().sum()
     }
 
     match part {
