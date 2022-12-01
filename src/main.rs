@@ -11,7 +11,7 @@ fn day1(input: &str) -> usize {
             .map(|inventory_as_string| {
                 inventory_as_string
                     .split('\n')
-                    .map(|calories| calories.parse::<usize>().unwrap_or(0))
+                    .filter_map(|calories| calories.parse::<usize>().ok())
                     .sum::<usize>()
             })
             .max()
