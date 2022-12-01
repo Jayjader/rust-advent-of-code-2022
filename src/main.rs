@@ -88,8 +88,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     if args.len() == 1 {
         let part1 = day1(&contents, Part::One);
         let part2 = day1(&contents, Part::Two);
-        println!("Solutions:\nPart 1: {}, Part 2: {}", part1, part2);
-        Ok(())
+        Ok(println!("Solutions:\nPart 1: {}, Part 2: {}", part1, part2))
     } else {
         let part = args[1].parse::<usize>()?.try_into()?;
         let solution = day1(&contents, part);
