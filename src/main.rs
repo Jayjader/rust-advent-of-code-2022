@@ -23,7 +23,7 @@ impl TryInto<Part> for usize {
 
 /// solve problem for day 1
 fn day1(input: &str, part: Part) -> usize {
-    /// Takes a list of inventories, separated by blank lies, of calories, separated by newlines, as input.
+    /// Takes a list of inventories, separated by blank lines, of calories, separated by newlines, as input.
     /// Returns an iterator over the sum of each inventory.
     /// (common sub-problem for both parts of day 1)
     fn parse_inventory_totals(input: &str) -> Map<Split<&str>, fn(&str) -> usize> {
@@ -31,11 +31,11 @@ fn day1(input: &str, part: Part) -> usize {
             inventory_as_string
                 .split('\n')
                 .filter_map(|calories| calories.parse::<usize>().ok())
-                .sum::<usize>()
+                .sum()
         })
     }
 
-    /// Takes a list of inventories, separated by blank lies, of calories, separated by newlines, as input.
+    /// Takes a list of inventories, separated by blank lines, of calories, separated by newlines, as input.
     /// Returns the sum of the one containing the most calories.
     fn part1(input: &str) -> usize {
         parse_inventory_totals(input)
@@ -43,7 +43,7 @@ fn day1(input: &str, part: Part) -> usize {
             .expect("couldn't calculate max!")
     }
 
-    /// Takes a list of inventories, separated by blank lies, of calories, separated by newlines, as input.
+    /// Takes a list of inventories, separated by blank lines, of calories, separated by newlines, as input.
     /// Returns the top 3 largest inventory sums.
     fn part2(input: &str) -> usize {
         let mut max = [0, 0, 0];
