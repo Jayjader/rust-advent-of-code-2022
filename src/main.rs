@@ -1,25 +1,38 @@
 extern crate core;
 
-use std::fs;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::iter::Map;
 use std::str::Split;
+use std::{env, fs};
 
 enum Part {
     One,
     Two,
 }
 
+#[derive(Debug, Clone)]
+struct PartParseError(usize);
+
 impl TryInto<Part> for usize {
-    type Error = ();
+    type Error = PartParseError;
 
     fn try_into(self) -> Result<Part, Self::Error> {
         match self {
             1 => Ok(Part::One),
             2 => Ok(Part::Two),
-            _ => Err(()),
+            _ => Err(PartParseError(self)),
         }
     }
 }
+
+impl Display for PartParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "couldn't parse problem part '{}'", self.0)
+    }
+}
+
+impl Error for PartParseError {}
 
 /// solve problem for day 1
 fn day1(input: &str, part: Part) -> usize {
@@ -63,9 +76,18 @@ fn day1(input: &str, part: Part) -> usize {
 }
 
 /// passes problem input to solver for the given day
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string("./input")
         .expect("where's the input file? didn't find it at './input'.");
-    let solution = day1(&contents, Part::Two);
-    println!("Solution: {}", solution)
+    let args: Vec<String> = env::args().collect();
+    if args.len() == 1 {
+        let part1 = day1(&contents, Part::One);
+        let part2 = day1(&contents, Part::Two);
+        println!("Solutions:\nPart 1: {}, Part 2: {}", part1, part2);
+        Ok(())
+    } else {
+        let part = args[1].parse::<usize>()?.try_into()?;
+        let solution = day1(&contents, part);
+        Ok(println!("Solution: {}", solution))
+    }
 }
