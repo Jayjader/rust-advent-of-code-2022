@@ -46,7 +46,7 @@ fn day1(input: &str, part: Part) -> usize {
                 // parse is sometimes being fed something empty here, I don't know why
                 // but just ignoring it gives the correct result anyways
                 // so it's probably the nested splitting that is leaving behind an empty string or something
-                .filter_map(|calories| calories.parse::<usize>().ok())
+                .flat_map(|calories| calories.parse::<usize>())
                 .sum()
         })
     }
@@ -60,12 +60,12 @@ fn day1(input: &str, part: Part) -> usize {
     }
 
     /// Takes a list of inventories, separated by blank lines, of calories, separated by newlines, as input.
-    /// Returns the top 3 largest inventory sums.
+    /// Returns the sum of the top 3 largest inventory sums.
     fn part2(input: &str) -> usize {
         let mut max = [0, 0, 0];
         for calories in parse_inventory_totals(input) {
             // sorting guarantees that if calories is bigger than max[0] then it is among the top 3.
-            // conversely, sorting guarantees that max[0] is the smallest and thus should be dropped when a new member is found.
+            // additionally, sorting guarantees that max[0] is the smallest and thus should always be dropped when a new max is found.
             if calories > max[0] {
                 max[0] = calories;
                 max.sort();
