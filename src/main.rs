@@ -1,12 +1,10 @@
 extern crate core;
 
-use crate::Outcome::{Draw, Lose, Win};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Map;
 use std::str::Split;
 use std::{env, fs};
-use Shape::{Paper, Rock, Scissors};
 
 enum Part {
     One,
@@ -82,99 +80,68 @@ fn day1(input: &str, part: Part) -> usize {
     }
 }
 
-#[derive(Debug)]
-enum Shape {
-    Rock,
-    Paper,
-    Scissors,
-}
-#[derive(Debug)]
-enum Outcome {
-    Lose,
-    Draw,
-    Win,
-}
-
-impl TryInto<Shape> for char {
-    type Error = ();
-
-    fn try_into(self) -> Result<Shape, Self::Error> {
-        (match self {
-            'A' => Some(Rock),
-            'B' => Some(Paper),
-            'C' => Some(Scissors),
-            'X' => Some(Rock),
-            'Y' => Some(Paper),
-            'Z' => Some(Scissors),
-            _ => None,
-        })
-        .ok_or(())
-    }
-}
-impl TryInto<Outcome> for char {
-    type Error = ();
-
-    fn try_into(self) -> Result<Outcome, Self::Error> {
-        (match self {
-            'X' => Some(Lose),
-            'Y' => Some(Draw),
-            'Z' => Some(Win),
-            _ => None,
-        })
-        .ok_or(())
-    }
-}
-fn outcome(me: &Shape, opponent: &Shape) -> Outcome {
-    match (me, opponent) {
-        (&Rock, &Rock) => Draw,
-        (&Paper, &Paper) => Draw,
-        (&Scissors, &Scissors) => Draw,
-        (&Rock, &Paper) => Lose,
-        (&Paper, &Rock) => Win,
-        (&Scissors, &Paper) => Win,
-        (&Paper, &Scissors) => Lose,
-        (&Rock, &Scissors) => Win,
-        (&Scissors, &Rock) => Lose,
-    }
-}
-fn move_needed(opponent_move: &Shape, desired_outcome: &Outcome) -> Shape {
-    match (opponent_move, desired_outcome) {
-        (&Rock, &Lose) => Scissors,
-        (&Rock, &Draw) => Rock,
-        (&Rock, &Win) => Paper,
-        (&Paper, &Lose) => Rock,
-        (&Paper, &Draw) => Paper,
-        (&Paper, &Win) => Scissors,
-        (&Scissors, &Lose) => Paper,
-        (&Scissors, &Draw) => Scissors,
-        (&Scissors, &Win) => Rock,
-    }
-}
-trait Scored {
-    fn score(thing: &Self) -> u32;
-}
-
-impl Scored for Shape {
-    fn score(s: &Shape) -> u32 {
-        match s {
-            Rock => 1,
-            Paper => 2,
-            Scissors => 3,
-        }
-    }
-}
-impl Scored for Outcome {
-    fn score(o: &Outcome) -> u32 {
-        match o {
-            Lose => 0,
-            Draw => 3,
-            Win => 6,
-        }
-    }
-}
-
 /// solve problem for day 2
 fn day2(input: &str, part: Part) -> u32 {
+    enum Shape {
+        Rock,
+        Paper,
+        Scissors,
+    }
+    enum Outcome {
+        Lose,
+        Draw,
+        Win,
+    }
+
+    impl TryInto<Shape> for char {
+        type Error = char;
+
+        fn try_into(self) -> Result<Shape, Self::Error> {
+            match self {
+                'A' => Ok(Shape::Rock),
+                'B' => Ok(Shape::Paper),
+                'C' => Ok(Shape::Scissors),
+                'X' => Ok(Shape::Rock),
+                'Y' => Ok(Shape::Paper),
+                'Z' => Ok(Shape::Scissors),
+                c => Err(c),
+            }
+        }
+    }
+    impl TryInto<Outcome> for char {
+        type Error = char;
+
+        fn try_into(self) -> Result<Outcome, Self::Error> {
+            match self {
+                'X' => Ok(Outcome::Lose),
+                'Y' => Ok(Outcome::Draw),
+                'Z' => Ok(Outcome::Win),
+                c => Err(c),
+            }
+        }
+    }
+    trait Scored {
+        fn score(thing: &Self) -> u32;
+    }
+
+    impl Scored for Shape {
+        fn score(s: &Shape) -> u32 {
+            match s {
+                Shape::Rock => 1,
+                Shape::Paper => 2,
+                Shape::Scissors => 3,
+            }
+        }
+    }
+    impl Scored for Outcome {
+        fn score(o: &Outcome) -> u32 {
+            match o {
+                Outcome::Lose => 0,
+                Outcome::Draw => 3,
+                Outcome::Win => 6,
+            }
+        }
+    }
     fn part1(input: &str) -> u32 {
         input.lines().fold(0, |accu, line| {
             let mut chars = line.chars();
@@ -189,7 +156,17 @@ fn day2(input: &str, part: Part) -> u32 {
                 .expect("line missing third character")
                 .try_into()
                 .expect("character is not outcome");
-            let outcome = outcome(&my_move, &opponent_move);
+            let outcome = match (&my_move, &opponent_move) {
+                (Shape::Rock, Shape::Rock) => Outcome::Draw,
+                (Shape::Paper, Shape::Paper) => Outcome::Draw,
+                (Shape::Scissors, Shape::Scissors) => Outcome::Draw,
+                (Shape::Rock, Shape::Paper) => Outcome::Lose,
+                (Shape::Paper, Shape::Rock) => Outcome::Win,
+                (Shape::Scissors, Shape::Paper) => Outcome::Win,
+                (Shape::Paper, Shape::Scissors) => Outcome::Lose,
+                (Shape::Rock, Shape::Scissors) => Outcome::Win,
+                (Shape::Scissors, Shape::Rock) => Outcome::Lose,
+            };
             accu + Scored::score(&outcome) + Scored::score(&my_move)
         })
     }
@@ -207,9 +184,18 @@ fn day2(input: &str, part: Part) -> u32 {
                 .expect("line missing third character")
                 .try_into()
                 .expect("character is not outcome");
-            let my_move = move_needed(&opponent_move, &desired_outcome);
-            let outcome = outcome(&my_move, &opponent_move);
-            accu + Scored::score(&outcome) + Scored::score(&my_move)
+            let my_move = match (&opponent_move, &desired_outcome) {
+                (Shape::Rock, Outcome::Lose) => Shape::Scissors,
+                (Shape::Rock, Outcome::Draw) => Shape::Rock,
+                (Shape::Rock, Outcome::Win) => Shape::Paper,
+                (Shape::Paper, Outcome::Lose) => Shape::Rock,
+                (Shape::Paper, Outcome::Draw) => Shape::Paper,
+                (Shape::Paper, Outcome::Win) => Shape::Scissors,
+                (Shape::Scissors, Outcome::Lose) => Shape::Paper,
+                (Shape::Scissors, Outcome::Draw) => Shape::Scissors,
+                (Shape::Scissors, Outcome::Win) => Shape::Rock,
+            };
+            accu + Scored::score(&desired_outcome) + Scored::score(&my_move)
         })
     }
     match part {
@@ -220,8 +206,8 @@ fn day2(input: &str, part: Part) -> u32 {
 
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string("./input")
-        .expect("where's the input file? didn't find it at './input'.");
+    let contents =
+        fs::read_to_string("./input").expect("where's the input file? didn't find it at './input'");
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let part1 = day2(&contents, Part::One);
