@@ -111,6 +111,19 @@ impl TryInto<Shape> for char {
         .ok_or(())
     }
 }
+impl TryInto<Outcome> for char {
+    type Error = ();
+
+    fn try_into(self) -> Result<Outcome, Self::Error> {
+        (match self {
+            'X' => Some(Lose),
+            'Y' => Some(Draw),
+            'Z' => Some(Win),
+            _ => None,
+        })
+        .ok_or(())
+    }
+}
 fn outcome(me: &Shape, opponent: &Shape) -> Outcome {
     match (me, opponent) {
         (&Rock, &Rock) => Draw,
@@ -122,6 +135,19 @@ fn outcome(me: &Shape, opponent: &Shape) -> Outcome {
         (&Paper, &Scissors) => Lose,
         (&Rock, &Scissors) => Win,
         (&Scissors, &Rock) => Lose,
+    }
+}
+fn move_needed(opponent_move: &Shape, desired_outcome: &Outcome) -> Shape {
+    match (opponent_move, desired_outcome) {
+        (&Rock, &Lose) => Scissors,
+        (&Rock, &Draw) => Rock,
+        (&Rock, &Win) => Paper,
+        (&Paper, &Lose) => Rock,
+        (&Paper, &Draw) => Paper,
+        (&Paper, &Win) => Scissors,
+        (&Scissors, &Lose) => Paper,
+        (&Scissors, &Draw) => Scissors,
+        (&Scissors, &Win) => Rock,
     }
 }
 trait Scored {
@@ -167,15 +193,34 @@ fn day2(input: &str, part: Part) -> u32 {
             accu + Scored::score(&outcome) + Scored::score(&my_move)
         })
     }
+    fn part2(input: &str) -> u32 {
+        input.lines().fold(0, |accu, line| {
+            let mut chars = line.chars();
+            let opponent_move: Shape = chars
+                .next()
+                .expect("line missing first character")
+                .try_into()
+                .expect("character is not shape");
+            chars.next().expect("line missing second character");
+            let desired_outcome: Outcome = chars
+                .next()
+                .expect("line missing third character")
+                .try_into()
+                .expect("character is not outcome");
+            let my_move = move_needed(&opponent_move, &desired_outcome);
+            let outcome = outcome(&my_move, &opponent_move);
+            accu + Scored::score(&outcome) + Scored::score(&my_move)
+        })
+    }
     match part {
         Part::One => part1(input),
-        Part::Two => 0,
+        Part::Two => part2(input),
     }
 }
 
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string("./input.real")
+    let contents = fs::read_to_string("./input")
         .expect("where's the input file? didn't find it at './input'.");
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
