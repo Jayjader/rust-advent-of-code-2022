@@ -6,6 +6,7 @@ use std::fmt::{Display, Formatter};
 use std::iter::Map;
 use std::str::Split;
 use std::{env, fs};
+use Shape::{Paper, Rock, Scissors};
 
 enum Part {
     One,
@@ -99,12 +100,12 @@ impl TryInto<Shape> for char {
 
     fn try_into(self) -> Result<Shape, Self::Error> {
         (match self {
-            'A' => Some(Shape::Rock),
-            'B' => Some(Shape::Paper),
-            'C' => Some(Shape::Scissors),
-            'X' => Some(Shape::Rock),
-            'Y' => Some(Shape::Paper),
-            'Z' => Some(Shape::Scissors),
+            'A' => Some(Rock),
+            'B' => Some(Paper),
+            'C' => Some(Scissors),
+            'X' => Some(Rock),
+            'Y' => Some(Paper),
+            'Z' => Some(Scissors),
             _ => None,
         })
         .ok_or(())
@@ -112,15 +113,15 @@ impl TryInto<Shape> for char {
 }
 fn outcome(me: &Shape, opponent: &Shape) -> Outcome {
     match (me, opponent) {
-        (&Shape::Rock, &Shape::Rock) => Draw,
-        (&Shape::Paper, &Shape::Paper) => Draw,
-        (&Shape::Scissors, &Shape::Scissors) => Draw,
-        (&Shape::Rock, &Shape::Paper) => Lose,
-        (&Shape::Paper, &Shape::Rock) => Win,
-        (&Shape::Scissors, &Shape::Paper) => Win,
-        (&Shape::Paper, &Shape::Scissors) => Lose,
-        (&Shape::Rock, &Shape::Scissors) => Win,
-        (&Shape::Scissors, &Shape::Rock) => Lose,
+        (&Rock, &Rock) => Draw,
+        (&Paper, &Paper) => Draw,
+        (&Scissors, &Scissors) => Draw,
+        (&Rock, &Paper) => Lose,
+        (&Paper, &Rock) => Win,
+        (&Scissors, &Paper) => Win,
+        (&Paper, &Scissors) => Lose,
+        (&Rock, &Scissors) => Win,
+        (&Scissors, &Rock) => Lose,
     }
 }
 trait Scored {
@@ -130,48 +131,46 @@ trait Scored {
 impl Scored for Shape {
     fn score(s: &Shape) -> u32 {
         match s {
-            Shape::Rock => 1,
-            Shape::Paper => 2,
-            Shape::Scissors => 3,
+            Rock => 1,
+            Paper => 2,
+            Scissors => 3,
         }
     }
 }
 impl Scored for Outcome {
     fn score(o: &Outcome) -> u32 {
         match o {
-            Outcome::Lose => 0,
-            Outcome::Draw => 3,
-            Outcome::Win => 6,
+            Lose => 0,
+            Draw => 3,
+            Win => 6,
         }
     }
 }
 
 /// solve problem for day 2
 fn day2(input: &str, part: Part) -> u32 {
-    input.lines().fold(0, |accu, line| {
-        let mut chars = line.chars();
-        let opponent_move: Shape = chars
-            .next()
-            .expect("line missing first character")
-            .try_into()
-            .expect("character is not shape");
-        chars.next().expect("line missing second character");
-        let my_move: Shape = chars
-            .next()
-            .expect("line missing third character")
-            .try_into()
-            .expect("character is not outcome");
-        let outcome = outcome(&my_move, &opponent_move);
-        println!(
-            "{:?} ({}) + {:?} = {:?} ({})",
-            my_move,
-            Scored::score(&my_move),
-            opponent_move,
-            outcome,
-            Scored::score(&outcome)
-        );
-        accu + Scored::score(&outcome) + Scored::score(&my_move)
-    })
+    fn part1(input: &str) -> u32 {
+        input.lines().fold(0, |accu, line| {
+            let mut chars = line.chars();
+            let opponent_move: Shape = chars
+                .next()
+                .expect("line missing first character")
+                .try_into()
+                .expect("character is not shape");
+            chars.next().expect("line missing second character");
+            let my_move: Shape = chars
+                .next()
+                .expect("line missing third character")
+                .try_into()
+                .expect("character is not outcome");
+            let outcome = outcome(&my_move, &opponent_move);
+            accu + Scored::score(&outcome) + Scored::score(&my_move)
+        })
+    }
+    match part {
+        Part::One => part1(input),
+        Part::Two => 0,
+    }
 }
 
 /// passes problem input to solver for the given day
