@@ -1,5 +1,6 @@
 extern crate core;
 
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Map;
@@ -204,18 +205,48 @@ fn day2(input: &str, part: Part) -> u32 {
     }
 }
 
+/// solve problem for day 3
+fn day3(input: &str, part: Part) -> usize {
+    fn part1(input: &str) -> usize {
+        input
+            .lines()
+            .map(|rucksack| {
+                let (compartment_1, compartment_2) = rucksack.split_at(rucksack.len() / 2);
+                let (compartment_1, compartment_2) = (
+                    compartment_1.chars().collect::<HashSet<_>>(),
+                    compartment_2.chars().collect::<HashSet<_>>(),
+                );
+                let shared: Vec<&char> = compartment_1.intersection(&compartment_2).collect();
+                assert_eq!(shared.len(), 1);
+                let shared_char = shared[0];
+
+                (*shared_char as u32 as usize)
+                    - (if shared_char.is_uppercase() {
+                        65 - 27 // 65 is 'A'
+                    } else {
+                        97 - 1 // 97 is 'a'
+                    })
+            })
+            .sum()
+    }
+    match part {
+        Part::One => part1(input),
+        Part::Two => 0,
+    }
+}
+
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
     let contents =
         fs::read_to_string("./input").expect("where's the input file? didn't find it at './input'");
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
-        let part1 = day2(&contents, Part::One);
-        let part2 = day2(&contents, Part::Two);
+        let part1 = day3(&contents, Part::One);
+        let part2 = day3(&contents, Part::Two);
         Ok(println!("Solutions:\nPart 1: {}, Part 2: {}", part1, part2))
     } else {
         let part = args[1].parse::<usize>()?.try_into()?;
-        let solution = day2(&contents, part);
+        let solution = day3(&contents, part);
         Ok(println!("Solution: {}", solution))
     }
 }
