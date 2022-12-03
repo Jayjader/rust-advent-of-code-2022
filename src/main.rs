@@ -1,6 +1,6 @@
 extern crate core;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Map;
@@ -207,6 +207,15 @@ fn day2(input: &str, part: Part) -> u32 {
 
 /// solve problem for day 3
 fn day3(input: &str, part: Part) -> usize {
+    /// common sub-problem for both parts of day 3
+    fn priority_for_char(shared_char: &char) -> usize {
+        (*shared_char as u32 as usize)
+            - (if shared_char.is_uppercase() {
+                65 - 27 // 65 is 'A' which has priority 26
+            } else {
+                97 - 1 // 97 is 'a' which has priority 1
+            })
+    }
     fn part1(input: &str) -> usize {
         input
             .lines()
@@ -217,21 +226,20 @@ fn day3(input: &str, part: Part) -> usize {
                     compartment_2.chars().collect::<HashSet<_>>(),
                 );
                 let shared: Vec<&char> = compartment_1.intersection(&compartment_2).collect();
+                // safety check that there really is 1 and only 1 shared char
                 assert_eq!(shared.len(), 1);
-                let shared_char = shared[0];
 
-                (*shared_char as u32 as usize)
-                    - (if shared_char.is_uppercase() {
-                        65 - 27 // 65 is 'A'
-                    } else {
-                        97 - 1 // 97 is 'a'
-                    })
+                priority_for_char(shared[0])
             })
             .sum()
     }
+
     fn part2(input: &str) -> usize {
-        let vec_lines = input.lines().collect::<Vec<_>>();
-        let common_item_per_group: Vec<HashSet<char>> = vec_lines
+        // collect into intermediate Vec so that we can call .chunks_exact on it
+        // in nightly we could use array_chunk or next_chunk to avoid this intermediate allocation
+        let vec_lines: Vec<_> = input.lines().collect();
+
+        vec_lines
             .chunks_exact(3)
             .map(|group_of_rucksacks| {
                 group_of_rucksacks
@@ -241,26 +249,13 @@ fn day3(input: &str, part: Part) -> usize {
             .map(|hashed_sacks| {
                 let mut common = hashed_sacks.clone().next().unwrap();
                 for sack in hashed_sacks {
-                    common = common.intersection(&sack).map(|c| *c).collect();
+                    common = common.intersection(&sack).copied().collect();
                 }
                 // safety check that we found a single common element for each group of 3 rucksacks
                 assert_eq!(common.len(), 1);
                 common
             })
-            .collect();
-
-        common_item_per_group
-            .iter()
-            .map(|c| {
-                let shared: Vec<&char> = c.iter().collect();
-                let c = shared[0];
-                (*c as u32 as usize)
-                    - (if c.is_uppercase() {
-                        65 - 27 // 65 is 'A'
-                    } else {
-                        97 - 1 // 97 is 'a'
-                    })
-            })
+            .map(|c| priority_for_char(c.iter().collect::<Vec<_>>()[0]))
             .sum()
     }
     match part {
