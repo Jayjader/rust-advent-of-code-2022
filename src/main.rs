@@ -229,9 +229,43 @@ fn day3(input: &str, part: Part) -> usize {
             })
             .sum()
     }
+    fn part2(input: &str) -> usize {
+        let vec_lines = input.lines().collect::<Vec<_>>();
+        let common_item_per_group: Vec<HashSet<char>> = vec_lines
+            .chunks_exact(3)
+            .map(|group_of_rucksacks| {
+                group_of_rucksacks
+                    .iter()
+                    .map(|rucksack| rucksack.chars().collect::<HashSet<char>>())
+            })
+            .map(|hashed_sacks| {
+                let mut common = hashed_sacks.clone().next().unwrap();
+                for sack in hashed_sacks {
+                    common = common.intersection(&sack).map(|c| *c).collect();
+                }
+                // safety check that we found a single common element for each group of 3 rucksacks
+                assert_eq!(common.len(), 1);
+                common
+            })
+            .collect();
+
+        common_item_per_group
+            .iter()
+            .map(|c| {
+                let shared: Vec<&char> = c.iter().collect();
+                let c = shared[0];
+                (*c as u32 as usize)
+                    - (if c.is_uppercase() {
+                        65 - 27 // 65 is 'A'
+                    } else {
+                        97 - 1 // 97 is 'a'
+                    })
+            })
+            .sum()
+    }
     match part {
         Part::One => part1(input),
-        Part::Two => 0,
+        Part::Two => part2(input),
     }
 }
 
