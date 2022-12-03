@@ -266,16 +266,21 @@ fn day3(input: &str, part: Part) -> usize {
 
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
+    let days = [day1, day2, day3];
+    let today = 3;
     let contents =
         fs::read_to_string("./input").expect("where's the input file? didn't find it at './input'");
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
-        let part1 = day3(&contents, Part::One);
-        let part2 = day3(&contents, Part::Two);
+        let day = days[today - 1];
+        let part1 = day(&contents, Part::One);
+        let part2 = day(&contents, Part::Two);
         Ok(println!("Solutions:\nPart 1: {}, Part 2: {}", part1, part2))
     } else {
-        let part = args[1].parse::<usize>()?.try_into()?;
-        let solution = day3(&contents, part);
+        let day_index = args[1].parse::<usize>()?;
+        let day = days[day_index - 1];
+        let part = args[2].parse::<usize>()?.try_into()?;
+        let solution = day(&contents, part);
         Ok(println!("Solution: {}", solution))
     }
 }
