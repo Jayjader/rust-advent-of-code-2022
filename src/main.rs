@@ -82,7 +82,7 @@ fn day1(input: &str, part: Part) -> usize {
 }
 
 /// solve problem for day 2
-fn day2(input: &str, part: Part) -> u32 {
+fn day2(input: &str, part: Part) -> usize {
     enum Shape {
         Rock,
         Paper,
@@ -122,11 +122,11 @@ fn day2(input: &str, part: Part) -> u32 {
         }
     }
     trait Scored {
-        fn score(thing: &Self) -> u32;
+        fn score(thing: &Self) -> usize;
     }
 
     impl Scored for Shape {
-        fn score(s: &Shape) -> u32 {
+        fn score(s: &Shape) -> usize {
             match s {
                 Shape::Rock => 1,
                 Shape::Paper => 2,
@@ -135,7 +135,7 @@ fn day2(input: &str, part: Part) -> u32 {
         }
     }
     impl Scored for Outcome {
-        fn score(o: &Outcome) -> u32 {
+        fn score(o: &Outcome) -> usize {
             match o {
                 Outcome::Lose => 0,
                 Outcome::Draw => 3,
@@ -143,7 +143,7 @@ fn day2(input: &str, part: Part) -> u32 {
             }
         }
     }
-    fn part1(input: &str) -> u32 {
+    fn part1(input: &str) -> usize {
         input.lines().fold(0, |accu, line| {
             let mut chars = line.chars();
             let opponent_move: Shape = chars
@@ -171,7 +171,7 @@ fn day2(input: &str, part: Part) -> u32 {
             accu + Scored::score(&outcome) + Scored::score(&my_move)
         })
     }
-    fn part2(input: &str) -> u32 {
+    fn part2(input: &str) -> usize {
         input.lines().fold(0, |accu, line| {
             let mut chars = line.chars();
             let opponent_move: Shape = chars
