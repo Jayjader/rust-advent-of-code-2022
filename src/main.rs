@@ -3,8 +3,8 @@ extern crate core;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::iter::Map;
-use std::str::Split;
+use std::iter::{FlatMap, Map};
+use std::str::{Lines, Split};
 use std::{env, fs};
 
 enum Part {
@@ -288,9 +288,35 @@ fn day4(input: &str, part: Part) -> usize {
             })
             .sum()
     }
+
+    fn part2(input: &str) -> usize {
+        input
+            .lines()
+            .flat_map(|line| line.split_once(','))
+            .map(|(section1, section2)| {
+                (
+                    section1.split_once('-').unwrap(),
+                    section2.split_once('-').unwrap(),
+                )
+            })
+            .map(|((a0, a1), (b0, b1))| {
+                (
+                    (a0.parse::<usize>().unwrap(), a1.parse::<usize>().unwrap()),
+                    (b0.parse::<usize>().unwrap(), b1.parse::<usize>().unwrap()),
+                )
+            })
+            .map(|((start1, end1), (start2, end2))| {
+                // bool condition to unsigned int: true is 1 and false is 0
+                usize::from(
+                    start1 <= start2 && end1 >= start2 || start2 <= start1 && end2 >= start1,
+                )
+            })
+            .sum()
+    }
+
     match part {
         Part::One => part1(input),
-        Part::Two => 0,
+        Part::Two => part2(input),
     }
 }
 
