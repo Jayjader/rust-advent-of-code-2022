@@ -264,10 +264,40 @@ fn day3(input: &str, part: Part) -> usize {
     }
 }
 
+/// solves problem for day 4
+fn day4(input: &str, part: Part) -> usize {
+    fn part1(input: &str) -> usize {
+        input
+            .lines()
+            .flat_map(|line| line.split_once(','))
+            .map(|(section1, section2)| {
+                (
+                    section1.split_once('-').unwrap(),
+                    section2.split_once('-').unwrap(),
+                )
+            })
+            .map(|((a0, a1), (b0, b1))| {
+                (
+                    (a0.parse::<usize>().unwrap(), a1.parse::<usize>().unwrap()),
+                    (b0.parse::<usize>().unwrap(), b1.parse::<usize>().unwrap()),
+                )
+            })
+            .map(|((start1, end1), (start2, end2))| {
+                // bool condition to unsigned int: true is 1 and false is 0
+                usize::from(start1 <= start2 && end1 >= end2 || start2 <= start1 && end2 >= end1)
+            })
+            .sum()
+    }
+    match part {
+        Part::One => part1(input),
+        Part::Two => 0,
+    }
+}
+
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let days = [day1, day2, day3];
-    let today = 3;
+    let days = [day1, day2, day3, day4];
+    let today = 4;
     let contents =
         fs::read_to_string("./input").expect("where's the input file? didn't find it at './input'");
     let args: Vec<String> = env::args().collect();
