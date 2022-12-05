@@ -320,12 +320,17 @@ fn day4(input: &str, part: Part) -> usize {
     }
 }
 
+/// solves problem for day 5
+fn day5(input: &str, part: Part) -> usize {
+    0
+}
+
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let days = [day1, day2, day3, day4];
-    let today = 4;
-    let contents =
-        fs::read_to_string("./input").expect("where's the input file? didn't find it at './input'");
+    let days = [day1, day2, day3, day4, day5];
+    let today = 5;
+    let contents = fs::read_to_string(format!("./input/day{}.{}", today, "test"))
+        .expect("where's the input file? didn't find it at './input'");
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
