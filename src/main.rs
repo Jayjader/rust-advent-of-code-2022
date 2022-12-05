@@ -1,12 +1,13 @@
 extern crate core;
 
-use regex::Regex;
 use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::iter::{FlatMap, Map};
-use std::str::{Lines, Split};
+use std::iter::Map;
+use std::str::Split;
 use std::{env, fs};
+
+use regex::Regex;
 
 enum Part {
     One,
@@ -36,8 +37,26 @@ impl Display for PartParseError {
 
 impl Error for PartParseError {}
 
+#[derive(Debug)]
+enum Solution {
+    Number(usize),
+    String(String),
+}
+impl Display for Solution {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Solution::Number(n) => {
+                write!(f, "{}", n)
+            }
+            Solution::String(s) => {
+                write!(f, "{}", s)
+            }
+        }
+    }
+}
+
 /// solve problem for day 1
-fn day1(input: &str, part: Part) -> usize {
+fn day1(input: &str, part: Part) -> Solution {
     /// Takes a list of inventories, separated by blank lines, of calories, separated by newlines, as input.
     /// Returns an iterator over the sum of each inventory.
     /// (common sub-problem for both parts of day 1)
@@ -77,13 +96,13 @@ fn day1(input: &str, part: Part) -> usize {
     }
 
     match part {
-        Part::One => part1(input),
-        Part::Two => part2(input),
+        Part::One => Solution::Number(part1(input)),
+        Part::Two => Solution::Number(part2(input)),
     }
 }
 
 /// solve problem for day 2
-fn day2(input: &str, part: Part) -> usize {
+fn day2(input: &str, part: Part) -> Solution {
     enum Shape {
         Rock,
         Paper,
@@ -201,13 +220,13 @@ fn day2(input: &str, part: Part) -> usize {
         })
     }
     match part {
-        Part::One => part1(input),
-        Part::Two => part2(input),
+        Part::One => Solution::Number(part1(input)),
+        Part::Two => Solution::Number(part2(input)),
     }
 }
 
 /// solve problem for day 3
-fn day3(input: &str, part: Part) -> usize {
+fn day3(input: &str, part: Part) -> Solution {
     /// common sub-problem for both parts of day 3
     fn priority_for_char(shared_char: &char) -> usize {
         (*shared_char as u32 as usize)
@@ -260,13 +279,13 @@ fn day3(input: &str, part: Part) -> usize {
             .sum()
     }
     match part {
-        Part::One => part1(input),
-        Part::Two => part2(input),
+        Part::One => Solution::Number(part1(input)),
+        Part::Two => Solution::Number(part2(input)),
     }
 }
 
 /// solves problem for day 4
-fn day4(input: &str, part: Part) -> usize {
+fn day4(input: &str, part: Part) -> Solution {
     fn part1(input: &str) -> usize {
         input
             .lines()
@@ -316,13 +335,13 @@ fn day4(input: &str, part: Part) -> usize {
     }
 
     match part {
-        Part::One => part1(input),
-        Part::Two => part2(input),
+        Part::One => Solution::Number(part1(input)),
+        Part::Two => Solution::Number(part2(input)),
     }
 }
 
 /// solves problem for day 5
-fn day5(input: &str, part: Part) -> String {
+fn day5(input: &str, part: Part) -> Solution {
     fn part1(input: &str) -> String {
         let (drawing, commands) = input.split_once("\n\n").unwrap();
         let newline_index = drawing.find('\n').unwrap();
@@ -400,15 +419,14 @@ fn day5(input: &str, part: Part) -> String {
     }
 
     match part {
-        Part::One => part1(input),
-        Part::Two => part2(input),
+        Part::One => Solution::String(part1(input)),
+        Part::Two => Solution::String(part2(input)),
     }
 }
 
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    // let days = [day1, day2, day3, day4, day5];
-    let days = [day5, day5, day5, day5, day5];
+    let days = [day1, day2, day3, day4, day5];
     let today = 5;
     let contents = fs::read_to_string(format!("./input/day{}.{}", today, "prod"))
         .expect("where's the input file? didn't find it at './input'");
