@@ -428,11 +428,11 @@ fn day5(input: &str, part: Part) -> Solution {
 fn main() -> Result<(), Box<dyn Error>> {
     let days = [day1, day2, day3, day4, day5];
     let today = 5;
-    let contents = fs::read_to_string(format!("./input/day{}.{}", today, "prod"))
-        .expect("where's the input file? didn't find it at './input'");
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
+        let contents = fs::read_to_string(format!("./input/day{}.{}", today, "prod"))
+            .expect("where's the input file? didn't find it at './input'");
         let part1 = day(&contents, Part::One);
         let part2 = day(&contents, Part::Two);
         Ok(println!("Solutions:\nPart 1: {}, Part 2: {}", part1, part2))
@@ -440,6 +440,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let day_index = args[1].parse::<usize>()?;
         let day = days[day_index - 1];
         let part = args[2].parse::<usize>()?.try_into()?;
+        let contents = fs::read_to_string(format!("./input/day{}.{}", day_index, "prod"))
+            .expect("where's the input file? didn't find it at './input'");
         let solution = day(&contents, part);
         Ok(println!("Solution: {}", solution))
     }
