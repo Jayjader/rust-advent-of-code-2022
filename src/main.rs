@@ -346,18 +346,14 @@ fn day5(input: &str, part: Part) -> String {
     // parse command
     let re = Regex::new(r"^move (?P<count>\d+) from (?P<start>\d+) to (?P<end>\d+)$").unwrap();
     for line in commands.lines() {
-        dbg!(line);
         if let Some(caps) = re.captures(line) {
             let count = caps["count"].parse::<usize>().unwrap();
             let start = caps["start"].parse::<usize>().unwrap();
             let end = caps["end"].parse::<usize>().unwrap();
-            dbg!((count, start, end));
             for _ in 0..count {
                 let moved = stacks[start - 1].pop_front().unwrap();
                 stacks[end - 1].push_front(moved);
-                println!("moving from {} to {}", start, end);
             }
-            dbg!(&stacks);
         }
     }
     stacks.iter().map(|stack| stack[0]).collect::<String>()
