@@ -427,12 +427,14 @@ fn day5(input: &str, part: Part) -> Solution {
 /// solves problem for day 6
 fn day6(input: &str, part: Part) -> Solution {
     fn part1(input: &str) -> usize {
-        let mut sliding_window: [char; 4] = dbg!(input.chars().take(4).collect::<Vec<char>>())
+        let mut sliding_window: [char; 4] = input
+            .chars()
+            .take(4)
+            .collect::<Vec<char>>()
             .try_into()
             .unwrap();
         let mut end_of_marker = 0;
         for (index, c) in input.chars().skip(4).enumerate() {
-            dbg!((&c, sliding_window));
             sliding_window[0] = c;
             sliding_window.rotate_left(1);
             if HashSet::from(sliding_window).len() == 4 {
