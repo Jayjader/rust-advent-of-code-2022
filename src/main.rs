@@ -442,9 +442,27 @@ fn day6(input: &str, part: Part) -> Solution {
         }
         end_of_marker + 1 // problem is 1-indexed
     }
+    fn part2(input: &str) -> usize {
+        let mut sliding_window: [char; 14] = input
+            .chars()
+            .take(14)
+            .collect::<Vec<char>>()
+            .try_into()
+            .unwrap();
+        let mut end_of_marker = 0;
+        for (index, c) in input.chars().skip(14).enumerate() {
+            sliding_window[0] = c;
+            sliding_window.rotate_left(1);
+            if HashSet::from(sliding_window).len() == 14 {
+                end_of_marker = index + 14;
+                break;
+            }
+        }
+        end_of_marker + 1 // problem is 1-indexed
+    }
     match part {
         Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(0),
+        Part::Two => Solution::Number(part2(input)),
     }
 }
 
