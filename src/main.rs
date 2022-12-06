@@ -426,41 +426,40 @@ fn day5(input: &str, part: Part) -> Solution {
 
 /// solves problem for day 6
 fn day6(input: &str, part: Part) -> Solution {
-    fn part1(input: &str) -> usize {
-        let mut sliding_window: [char; 4] = input
+    /// gets the first N chars as a statically-allocated array
+    /// common sub-problem for both parts
+    fn get_window<const N: usize>(input: &str) -> [char; N] {
+        let sliding_window: [char; N] = input
             .chars()
-            .take(4)
+            .take(N)
             .collect::<Vec<char>>()
             .try_into()
             .unwrap();
+        sliding_window
+    }
+    /// slide window over chars in str slice until it contains no duplicates
+    /// common sub-problem for both parts
+    fn slide_window_until_unique<const N: usize>(
+        input: &str,
+        mut sliding_window: [char; N],
+    ) -> usize {
         let mut end_of_marker = 0;
-        for (index, c) in input.chars().skip(4).enumerate() {
+        for (index, c) in input.chars().skip(N).enumerate() {
             sliding_window[0] = c;
             sliding_window.rotate_left(1);
-            if HashSet::from(sliding_window).len() == 4 {
-                end_of_marker = index + 4;
+            if HashSet::from(sliding_window).len() == N {
+                end_of_marker = index + N;
                 break;
             }
         }
         end_of_marker + 1 // problem is 1-indexed
     }
+    fn part1(input: &str) -> usize {
+        slide_window_until_unique(input, get_window::<4>(input))
+    }
+
     fn part2(input: &str) -> usize {
-        let mut sliding_window: [char; 14] = input
-            .chars()
-            .take(14)
-            .collect::<Vec<char>>()
-            .try_into()
-            .unwrap();
-        let mut end_of_marker = 0;
-        for (index, c) in input.chars().skip(14).enumerate() {
-            sliding_window[0] = c;
-            sliding_window.rotate_left(1);
-            if HashSet::from(sliding_window).len() == 14 {
-                end_of_marker = index + 14;
-                break;
-            }
-        }
-        end_of_marker + 1 // problem is 1-indexed
+        slide_window_until_unique(input, get_window::<14>(input))
     }
     match part {
         Part::One => Solution::Number(part1(input)),
