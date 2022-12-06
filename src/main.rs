@@ -1,5 +1,3 @@
-extern crate core;
-
 use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -426,40 +424,23 @@ fn day5(input: &str, part: Part) -> Solution {
 
 /// solves problem for day 6
 fn day6(input: &str, part: Part) -> Solution {
-    /// gets the first N chars as a statically-allocated array
+    /// finds the first window of length N over bytes in input str slice that contains no duplicates
+    /// return the position (in the overall input slice) of the last byte in the window found
     /// common sub-problem for both parts
-    fn get_window<const N: usize>(input: &str) -> [char; N] {
-        let sliding_window: [char; N] = input
-            .chars()
-            .take(N)
-            .collect::<Vec<char>>()
-            .try_into()
-            .unwrap();
-        sliding_window
-    }
-    /// slide window over chars in str slice until it contains no duplicates
-    /// common sub-problem for both parts
-    fn slide_window_until_unique<const N: usize>(
-        input: &str,
-        mut sliding_window: [char; N],
-    ) -> usize {
-        let mut end_of_marker = 0;
-        for (index, c) in input.chars().skip(N).enumerate() {
-            sliding_window[0] = c;
-            sliding_window.rotate_left(1);
-            if HashSet::from(sliding_window).len() == N {
-                end_of_marker = index + N;
-                break;
-            }
-        }
-        end_of_marker + 1 // problem is 1-indexed
+    fn slide_window_until_unique<const N: usize>(input: &str) -> usize {
+        input
+            .as_bytes()
+            .windows(N)
+            .position(|window| HashSet::<&u8>::from_iter(window).len() == N)
+            .unwrap()
+            + N
     }
     fn part1(input: &str) -> usize {
-        slide_window_until_unique(input, get_window::<4>(input))
+        slide_window_until_unique::<4>(input)
     }
 
     fn part2(input: &str) -> usize {
-        slide_window_until_unique(input, get_window::<14>(input))
+        slide_window_until_unique::<14>(input)
     }
     match part {
         Part::One => Solution::Number(part1(input)),
