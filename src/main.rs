@@ -1,4 +1,5 @@
-use std::collections::{HashSet, VecDeque};
+use std::borrow::Borrow;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Map;
@@ -448,10 +449,140 @@ fn day6(input: &str, part: Part) -> Solution {
     }
 }
 
+/// solves problem for day 7
+fn day7(input: &str, part: Part) -> Solution {
+    #[derive(Debug, Hash, Eq, PartialEq)]
+    enum Command<'a> {
+        ChangeDirParent,
+        ChangeDirChild(&'a str),
+        List,
+    }
+
+    impl<'a> TryFrom<&'a str> for Command<'a> {
+        type Error = ();
+        fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+            let (command, arg) = value.split_at(2);
+            match command {
+                "cd" => match arg.trim() {
+                    ".." => Ok(Command::ChangeDirParent),
+                    dir => Ok(Command::ChangeDirChild(dir)),
+                },
+                "ls" => Ok(Command::List),
+                _ => Err(()),
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    enum DirEntry<'a> {
+        Dir(&'a str),
+        File(&'a str, usize),
+    }
+
+    impl<'a> TryInto<DirEntry<'a>> for &'a str {
+        type Error = ();
+        fn try_into(self) -> Result<DirEntry<'a>, Self::Error> {
+            let (extra, name) = self.split_once(' ').expect("couldn't split on space");
+            match extra {
+                "dir" => Ok(DirEntry::Dir(name)),
+                _ => Ok(DirEntry::File(
+                    name,
+                    extra.parse::<usize>().expect("couldn't parse file size"),
+                )),
+            }
+        }
+    }
+
+    fn part1(input: &str) -> usize {
+        /// calculates total size of a dir
+        /// stores all dir sizes in cache to avoid duplicate calculations
+        /// also allows inspecting/retrieval of all dir sizes calculated
+        fn total_size<'a>(
+            tree: &HashMap<String, Vec<DirEntry<'a>>>,
+            dir: String,
+            cache: &mut HashMap<String, usize>,
+        ) -> usize {
+            if let Some(cached_size) = cache.get(dir.as_str()) {
+                return *cached_size;
+            }
+            let size = tree
+                .get(dir.as_str())
+                .expect("dir does not exist in tree")
+                .iter()
+                .map(|entry| match entry {
+                    DirEntry::File(_, size) => *size,
+                    DirEntry::Dir(name) => {
+                        let path = [dir.as_str(), *name].join("/");
+                        total_size(tree, path, cache)
+                    }
+                })
+                .sum();
+            cache.insert(dir, size);
+            size
+        }
+
+        let accu = &mut HashMap::<String, Vec<DirEntry>>::new();
+        let cwd = &mut Vec::new();
+        let (accu, _) = input
+            .split("$ ")
+            .skip(1 /*first element of split is empty string*/)
+            .map(|command_with_output| {
+                let (command, result) = command_with_output.split_once('\n').unwrap();
+                let command = Command::try_from(command).unwrap();
+                (
+                    command,
+                    if result.is_empty() {
+                        None
+                    } else {
+                        Some(result)
+                    },
+                )
+            })
+            .fold((accu, cwd), |(accu, cwd), (command, result)| {
+                match command {
+                    Command::ChangeDirParent => {
+                        cwd.pop();
+                    }
+                    Command::ChangeDirChild(child) => {
+                        cwd.push(child);
+                    }
+                    Command::List => {
+                        accu.insert(
+                            cwd.join("/"),
+                            result
+                                .unwrap()
+                                .split_terminator('\n')
+                                .flat_map(|single_result| single_result.try_into())
+                                .collect(),
+                        );
+                    }
+                };
+
+                (accu, cwd)
+            });
+
+        let mut dir_sizes = HashMap::new();
+
+        total_size(accu, String::from("/"), &mut dir_sizes);
+
+        dir_sizes
+            .iter()
+            .filter_map(|(_, v)| if *v <= 100_000 { Some(v) } else { None })
+            .sum()
+    }
+    fn part2(_input: &str) -> usize {
+        0
+    }
+    match part {
+        Part::One => Solution::Number(part1(input)),
+        Part::Two => Solution::Number(part2(input)),
+    }
+}
+
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let days = [day1, day2, day3, day4, day5, day6];
-    let today = 6;
+    let days = [day1, day2, day3, day4, day5, day6, day7];
+    let today = 7;
     let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
