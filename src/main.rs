@@ -753,8 +753,65 @@ fn day8(input: &str, part: Part) -> Solution {
         visible.len()
     }
 
-    fn part2(_input: &str) -> usize {
-        0
+    fn part2(input: &str) -> usize {
+        let tree_heights = parse_tree_heights(input);
+        let square_size = tree_heights.len();
+        let mut max = 0;
+        for y in 0..square_size {
+            for x in 0..square_size {
+                let candidate_tree_height = tree_heights[y][x];
+                let visible_to_the_left = if x == 0 {
+                    0
+                } else {
+                    tree_heights[y][0..x]
+                        .iter()
+                        .rev()
+                        .position(|height| *height >= candidate_tree_height)
+                        .unwrap_or(x - 1)
+                        + 1
+                };
+                let visible_to_the_right = if x == square_size - 1 {
+                    0
+                } else {
+                    tree_heights[y][x + 1..]
+                        .iter()
+                        .position(|height| *height >= candidate_tree_height)
+                        .unwrap_or(square_size - x - 2)
+                        + 1
+                };
+                let visible_to_the_top = if y == 0 {
+                    0
+                } else {
+                    tree_heights
+                        .iter()
+                        .map(|line| line[x])
+                        .take(y)
+                        .rev()
+                        .position(|height| height >= candidate_tree_height)
+                        .unwrap_or(y - 1)
+                        + 1
+                };
+                let visible_to_the_bottom = if y == square_size - 1 {
+                    0
+                } else {
+                    tree_heights
+                        .iter()
+                        .map(|line| line[x])
+                        .skip(y + 1)
+                        .position(|height| height >= candidate_tree_height)
+                        .unwrap_or(square_size - y - 2)
+                        + 1
+                };
+                let scenic_score = visible_to_the_left
+                    * visible_to_the_right
+                    * visible_to_the_top
+                    * visible_to_the_bottom;
+                if scenic_score > max {
+                    max = scenic_score;
+                }
+            }
+        }
+        max
     }
 
     match part {
