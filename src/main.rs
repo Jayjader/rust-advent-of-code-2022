@@ -675,16 +675,19 @@ fn day7(input: &str, part: Part) -> Solution {
 
 /// solves the problem for day 8
 fn day8(input: &str, part: Part) -> Solution {
-    fn part1(input: &str) -> usize {
-        let tree_heights: Vec<Vec<usize>> = input
+    fn parse_tree_heights(input: &str) -> Vec<Vec<usize>> {
+        input
             .split_terminator('\n')
             .map(|line| line.split("").flat_map(|c| c.parse::<usize>()).collect())
-            .collect();
+            .collect()
+    }
+    fn part1(input: &str) -> usize {
+        let tree_heights: Vec<Vec<usize>> = parse_tree_heights(input);
         let square_size = tree_heights.len();
         assert_eq!(square_size, tree_heights[0].len()); // make sure we're really a square
         let mut visible = HashSet::new();
-        for y in 0..square_size {
-            let visible_from_the_left = tree_heights[y].iter().enumerate().fold(
+        for (y, line) in tree_heights.iter().enumerate() {
+            let visible_from_the_left = line.iter().enumerate().fold(
                 Vec::<(usize, usize)>::with_capacity(square_size),
                 |mut previous, (index, height)| {
                     if index == 0 || height > previous.last().map(|(_, h)| h).unwrap_or(&0usize) {
@@ -693,7 +696,7 @@ fn day8(input: &str, part: Part) -> Solution {
                     previous
                 },
             );
-            let visible_from_the_right = tree_heights[y].iter().rev().enumerate().fold(
+            let visible_from_the_right = line.iter().rev().enumerate().fold(
                 Vec::<(usize, usize)>::with_capacity(square_size),
                 |mut previous, (index, height)| {
                     if index == 0 || height > previous.last().map(|(_, h)| h).unwrap_or(&0usize) {
