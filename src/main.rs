@@ -673,10 +673,96 @@ fn day7(input: &str, part: Part) -> Solution {
     }
 }
 
+/// solves the problem for day 8
+fn day8(input: &str, part: Part) -> Solution {
+    fn part1(input: &str) -> usize {
+        let tree_heights: Vec<Vec<usize>> = input
+            .split_terminator('\n')
+            .map(|line| line.split("").flat_map(|c| c.parse::<usize>()).collect())
+            .collect();
+        let square_size = tree_heights.len();
+        assert_eq!(square_size, tree_heights[0].len()); // make sure we're really a square
+        let mut visible = HashSet::new();
+        for y in 0..square_size {
+            let visible_from_the_left = tree_heights[y].iter().enumerate().fold(
+                Vec::<(usize, usize)>::with_capacity(square_size),
+                |mut previous, (index, height)| {
+                    if index == 0 || height > previous.last().map(|(_, h)| h).unwrap_or(&0usize) {
+                        previous.push((index, *height));
+                    }
+                    previous
+                },
+            );
+            let visible_from_the_right = tree_heights[y].iter().rev().enumerate().fold(
+                Vec::<(usize, usize)>::with_capacity(square_size),
+                |mut previous, (index, height)| {
+                    if index == 0 || height > previous.last().map(|(_, h)| h).unwrap_or(&0usize) {
+                        previous.push((square_size - index - 1, *height));
+                    }
+                    previous
+                },
+            );
+            let set_from_the_left: HashSet<_> =
+                HashSet::from_iter(visible_from_the_left.into_iter());
+            let set_from_the_right = HashSet::from_iter(visible_from_the_right.into_iter());
+            let visible_horizontally = set_from_the_left.union(&set_from_the_right);
+            for item in visible_horizontally {
+                let (x, height) = item;
+                visible.insert(((*x, y), *height));
+            }
+        }
+        for x in 0..square_size {
+            let visible_from_the_top = tree_heights.iter().map(|line| line[x]).enumerate().fold(
+                Vec::<(usize, usize)>::with_capacity(square_size),
+                |mut previous, (index, height)| {
+                    if index == 0 || height > *(previous.last().map(|(_, h)| h).unwrap_or(&0usize))
+                    {
+                        previous.push((index, height));
+                    }
+                    previous
+                },
+            );
+            let visible_from_the_bottom = tree_heights
+                .iter()
+                .map(|line| line[x])
+                .rev()
+                .enumerate()
+                .fold(
+                    Vec::<(usize, usize)>::with_capacity(square_size),
+                    |mut previous, (index, height)| {
+                        if index == 0
+                            || height > *(previous.last().map(|(_, h)| h).unwrap_or(&0usize))
+                        {
+                            previous.push((square_size - index - 1, height));
+                        }
+                        previous
+                    },
+                );
+            let set_from_the_top: HashSet<_> = HashSet::from_iter(visible_from_the_top.into_iter());
+            let set_from_the_bottom: HashSet<_> =
+                HashSet::from_iter(visible_from_the_bottom.into_iter());
+            let visible_vertically = set_from_the_top.union(&set_from_the_bottom);
+            for item in visible_vertically {
+                let (y, height) = item;
+                visible.insert(((x, *y), *height));
+            }
+        }
+        visible.len()
+    }
+
+    fn part2(_input: &str) -> usize {
+        0
+    }
+
+    match part {
+        Part::One => Solution::Number(part1(input)),
+        Part::Two => Solution::Number(part2(input)),
+    }
+}
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let days = [day1, day2, day3, day4, day5, day6, day7];
-    let today = 7;
+    let days = [day1, day2, day3, day4, day5, day6, day7, day8];
+    let today = 8;
     let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
