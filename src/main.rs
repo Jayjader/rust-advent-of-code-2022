@@ -520,7 +520,7 @@ fn day7(input: &str, part: Part) -> Solution {
             size
         }
 
-        let accu = &mut HashMap::<String, Vec<DirEntry>>::new();
+        let dir_map = &mut HashMap::<String, Vec<DirEntry>>::new();
         let cwd = &mut Vec::new();
         let (accu, _) = input
             .split("$ ")
@@ -537,7 +537,7 @@ fn day7(input: &str, part: Part) -> Solution {
                     },
                 )
             })
-            .fold((accu, cwd), |(accu, cwd), (command, result)| {
+            .fold((dir_map, cwd), |(accu, cwd), (command, result)| {
                 match command {
                     Command::ChangeDirParent => {
                         cwd.pop();
