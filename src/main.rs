@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Map;
-use std::str::{FromStr, Split, SplitTerminator};
+use std::str::{FromStr, Split};
 use std::{env, fs};
 
 use regex::Regex;
@@ -874,25 +874,15 @@ fn day9(input: &str, part: Part) -> Solution {
                 // move tail to catch up if needed
                 let tail_offset = (head.0 - tail.0, head.1 - tail.1);
                 match tail_offset {
-                    (x, 0) if isize::abs(x) > 1 => {
-                        tail.0 += isize::abs(x) / x;
-                    }
-                    (0, y) if isize::abs(y) > 1 => {
-                        tail.1 += isize::abs(y) / y;
-                    }
-                    (x, y) if isize::abs(x) > 1 => {
-                        tail.0 += isize::abs(x) / x;
-                        tail.1 += y;
-                    }
-                    (x, y) if isize::abs(y) > 1 => {
-                        tail.0 += x;
-                        tail.1 += isize::abs(y) / y;
-                    }
                     (x, y) if isize::abs(x) <= 1 && isize::abs(y) <= 1 => {
                         // tail is still adjacent to head after head moved, so tail stays put
                     }
+                    (x, y) if isize::abs(x) > 1 || isize::abs(y) > 1 => {
+                        tail.0 += x.signum();
+                        tail.1 += y.signum();
+                    }
                     other => {
-                        panic!("uhoh, tail detached from head: {:?}", other)
+                        panic!("uh-oh, tail detached from head: {:?}", other)
                     }
                 }
                 positions.insert(tail);
@@ -901,7 +891,7 @@ fn day9(input: &str, part: Part) -> Solution {
         positions.len()
     }
     fn part2(input: &str) -> usize {
-        let mut rope = [
+        let mut rope: [(isize, isize); 10] = [
             (0, 0),
             (0, 0),
             (0, 0),
@@ -930,22 +920,16 @@ fn day9(input: &str, part: Part) -> Solution {
                     let segment_offset = (rope[i - 1].0 - rope[i].0, rope[i - 1].1 - rope[i].1);
                     // move segment to catch up if needed
                     match segment_offset {
-                        (x, 0) if isize::abs(x) > 1 => {
-                            rope[i].0 += isize::abs(x) / x;
-                        }
-                        (0, y) if isize::abs(y) > 1 => {
-                            rope[i].1 += isize::abs(y) / y;
-                        }
                         (x, y) if isize::abs(x) > 1 || isize::abs(y) > 1 => {
-                            rope[i].0 += isize::abs(x) / x;
-                            rope[i].1 += isize::abs(y) / y;
+                            rope[i].0 += x.signum();
+                            rope[i].1 += y.signum();
                         }
                         (x, y) if isize::abs(x) <= 1 && isize::abs(y) <= 1 => {
                             // segment is still adjacent to previous after previous moved, so segment stays put
                             break;
                         }
                         other => {
-                            panic!("uhoh, segment {} detached from previous: {:?}", i, other)
+                            panic!("uh-oh, segment {} detached from previous: {:?}", i, other)
                         }
                     }
                 }
