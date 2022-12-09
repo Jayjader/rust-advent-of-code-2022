@@ -933,6 +933,7 @@ fn day9(input: &str, part: Part) -> Solution {
                 Direction::Down => (0, -1),
             };
             for _ in 0..distance {
+                println!("Moving head {:?}", head_offset);
                 // move head
                 rope[0] = (rope[0].0 + head_offset.0, rope[0].1 + head_offset.1);
                 // propagate movement down the rope segments
@@ -952,19 +953,25 @@ fn day9(input: &str, part: Part) -> Solution {
                             println!("move {} vertically", isize::abs(y) / y);
                             rope[i].1 += isize::abs(y) / y;
                         }
-                        (x, y) if isize::abs(x) > 1 => {
+                        (x, y) if isize::abs(x) > 1 && isize::abs(y) == 1 => {
                             println!("move {:?} diagonally", ((isize::abs(x) / x), y));
                             rope[i].0 += isize::abs(x) / x;
                             rope[i].1 += y;
                         }
-                        (x, y) if isize::abs(y) > 1 => {
+                        (x, y) if isize::abs(y) > 1 && isize::abs(x) == 1 => {
                             println!("move {:?} diagonally", (x, isize::abs(y) / y));
                             rope[i].0 += x;
+                            rope[i].1 += isize::abs(y) / y;
+                        }
+                        (x, y) if isize::abs(x) > 1 && isize::abs(y) > 1 => {
+                            println!("move {:?} diagonally", (x, isize::abs(y) / y));
+                            rope[i].0 += isize::abs(x) / x;
                             rope[i].1 += isize::abs(y) / y;
                         }
                         (x, y) if isize::abs(x) <= 1 && isize::abs(y) <= 1 => {
                             // segment is still adjacent to previous after previous moved, so segment stays put
                             println!("no movement needed");
+                            break;
                         }
                         other => {
                             panic!("uhoh, segment {} detached from previous: {:?}", i, other)
@@ -973,6 +980,7 @@ fn day9(input: &str, part: Part) -> Solution {
                 }
                 positions.insert(rope[9]);
             }
+            dbg!(rope);
         }
         positions.len()
     }
