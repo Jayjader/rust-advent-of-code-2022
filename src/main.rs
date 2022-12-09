@@ -933,34 +933,25 @@ fn day9(input: &str, part: Part) -> Solution {
                 Direction::Down => (0, -1),
             };
             for _ in 0..distance {
-                println!("Moving head {:?}", head_offset);
                 // move head
                 rope[0] = (rope[0].0 + head_offset.0, rope[0].1 + head_offset.1);
                 // propagate movement down the rope segments
                 for i in 1..10 {
                     let segment_offset = (rope[i - 1].0 - rope[i].0, rope[i - 1].1 - rope[i].1);
-                    print!(
-                        "segment {} is now offset by {:?} from previous => ",
-                        i, &segment_offset
-                    );
                     // move segment to catch up if needed
                     match segment_offset {
                         (x, 0) if isize::abs(x) > 1 => {
-                            println!("move {} horizontally", isize::abs(x) / x);
                             rope[i].0 += isize::abs(x) / x;
                         }
                         (0, y) if isize::abs(y) > 1 => {
-                            println!("move {} vertically", isize::abs(y) / y);
                             rope[i].1 += isize::abs(y) / y;
                         }
                         (x, y) if isize::abs(x) > 1 || isize::abs(y) > 1 => {
-                            println!("move {:?} diagonally", (x, isize::abs(y) / y));
                             rope[i].0 += isize::abs(x) / x;
                             rope[i].1 += isize::abs(y) / y;
                         }
                         (x, y) if isize::abs(x) <= 1 && isize::abs(y) <= 1 => {
                             // segment is still adjacent to previous after previous moved, so segment stays put
-                            println!("no movement needed");
                             break;
                         }
                         other => {
@@ -970,7 +961,6 @@ fn day9(input: &str, part: Part) -> Solution {
                 }
                 positions.insert(rope[9]);
             }
-            dbg!(rope);
         }
         positions.len()
     }
