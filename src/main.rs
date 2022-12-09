@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Map;
-use std::str::{FromStr, Split};
+use std::str::{FromStr, Split, SplitTerminator};
 use std::{env, fs};
 
 use regex::Regex;
@@ -841,11 +841,9 @@ fn day9(input: &str, part: Part) -> Solution {
             }
         }
     }
-    fn part1(input: &str) -> usize {
-        let (mut head, mut tail) = ((0, 0), (0, 0));
-        let mut positions = HashSet::new();
-        positions.insert(tail);
-        for (direction, distance) in input
+    /// common parsing for both parts
+    fn parse_input(input: &'_ str) -> impl Iterator<Item = (Direction, usize)> + '_ {
+        input
             .split_terminator('\n')
             .map(|motion| {
                 motion
@@ -858,7 +856,12 @@ fn day9(input: &str, part: Part) -> Solution {
                     dist.parse::<usize>().unwrap(),
                 )
             })
-        {
+    }
+    fn part1(input: &str) -> usize {
+        let (mut head, mut tail) = ((0, 0), (0, 0));
+        let mut positions = HashSet::new();
+        positions.insert(tail);
+        for (direction, distance) in parse_input(input) {
             let head_offset = match direction {
                 Direction::Left => (-1, 0),
                 Direction::Right => (1, 0),
@@ -912,20 +915,7 @@ fn day9(input: &str, part: Part) -> Solution {
         ];
         let mut positions = HashSet::new();
         positions.insert(rope[9]);
-        for (direction, distance) in input
-            .split_terminator('\n')
-            .map(|motion| {
-                motion
-                    .split_once(' ')
-                    .expect("no space in line to split on")
-            })
-            .map(|(dir, dist)| {
-                (
-                    dir.parse::<Direction>().unwrap(),
-                    dist.parse::<usize>().unwrap(),
-                )
-            })
-        {
+        for (direction, distance) in parse_input(input) {
             let head_offset = match direction {
                 Direction::Left => (-1, 0),
                 Direction::Right => (1, 0),
@@ -964,6 +954,7 @@ fn day9(input: &str, part: Part) -> Solution {
         }
         positions.len()
     }
+
     match part {
         Part::One => Solution::Number(part1(input)),
         Part::Two => Solution::Number(part2(input)),
