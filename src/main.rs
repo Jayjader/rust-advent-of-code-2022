@@ -953,17 +953,7 @@ fn day9(input: &str, part: Part) -> Solution {
                             println!("move {} vertically", isize::abs(y) / y);
                             rope[i].1 += isize::abs(y) / y;
                         }
-                        (x, y) if isize::abs(x) > 1 && isize::abs(y) == 1 => {
-                            println!("move {:?} diagonally", ((isize::abs(x) / x), y));
-                            rope[i].0 += isize::abs(x) / x;
-                            rope[i].1 += y;
-                        }
-                        (x, y) if isize::abs(y) > 1 && isize::abs(x) == 1 => {
-                            println!("move {:?} diagonally", (x, isize::abs(y) / y));
-                            rope[i].0 += x;
-                            rope[i].1 += isize::abs(y) / y;
-                        }
-                        (x, y) if isize::abs(x) > 1 && isize::abs(y) > 1 => {
+                        (x, y) if isize::abs(x) > 1 || isize::abs(y) > 1 => {
                             println!("move {:?} diagonally", (x, isize::abs(y) / y));
                             rope[i].0 += isize::abs(x) / x;
                             rope[i].1 += isize::abs(y) / y;
