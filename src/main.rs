@@ -897,9 +897,88 @@ fn day9(input: &str, part: Part) -> Solution {
         }
         positions.len()
     }
+    fn part2(input: &str) -> usize {
+        let mut rope = [
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+            (0, 0),
+        ];
+        let mut positions = HashSet::new();
+        positions.insert(rope[9]);
+        for (direction, distance) in input
+            .split_terminator('\n')
+            .map(|motion| {
+                motion
+                    .split_once(' ')
+                    .expect("no space in line to split on")
+            })
+            .map(|(dir, dist)| {
+                (
+                    dir.parse::<Direction>().unwrap(),
+                    dist.parse::<usize>().unwrap(),
+                )
+            })
+        {
+            let head_offset = match direction {
+                Direction::Left => (-1, 0),
+                Direction::Right => (1, 0),
+                Direction::Up => (0, 1),
+                Direction::Down => (0, -1),
+            };
+            for _ in 0..distance {
+                // move head
+                rope[0] = (rope[0].0 + head_offset.0, rope[0].1 + head_offset.1);
+                // propagate movement down the rope segments
+                for i in 1..10 {
+                    let segment_offset = (rope[i - 1].0 - rope[i].0, rope[i - 1].1 - rope[i].1);
+                    print!(
+                        "segment {} is now offset by {:?} from previous => ",
+                        i, &segment_offset
+                    );
+                    // move segment to catch up if needed
+                    match segment_offset {
+                        (x, 0) if isize::abs(x) > 1 => {
+                            println!("move {} horizontally", isize::abs(x) / x);
+                            rope[i].0 += isize::abs(x) / x;
+                        }
+                        (0, y) if isize::abs(y) > 1 => {
+                            println!("move {} vertically", isize::abs(y) / y);
+                            rope[i].1 += isize::abs(y) / y;
+                        }
+                        (x, y) if isize::abs(x) > 1 => {
+                            println!("move {:?} diagonally", ((isize::abs(x) / x), y));
+                            rope[i].0 += isize::abs(x) / x;
+                            rope[i].1 += y;
+                        }
+                        (x, y) if isize::abs(y) > 1 => {
+                            println!("move {:?} diagonally", (x, isize::abs(y) / y));
+                            rope[i].0 += x;
+                            rope[i].1 += isize::abs(y) / y;
+                        }
+                        (x, y) if isize::abs(x) <= 1 && isize::abs(y) <= 1 => {
+                            // segment is still adjacent to previous after previous moved, so segment stays put
+                            println!("no movement needed");
+                        }
+                        other => {
+                            panic!("uhoh, segment {} detached from previous: {:?}", i, other)
+                        }
+                    }
+                }
+                positions.insert(rope[9]);
+            }
+        }
+        positions.len()
+    }
     match part {
         Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(0),
+        Part::Two => Solution::Number(part2(input)),
     }
 }
 /// passes problem input to solver for the given day
