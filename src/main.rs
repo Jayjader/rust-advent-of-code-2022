@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::iter::Map;
-use std::str::Split;
+use std::str::{FromStr, Split};
 use std::{env, fs};
 
 use regex::Regex;
@@ -819,10 +819,93 @@ fn day8(input: &str, part: Part) -> Solution {
         Part::Two => Solution::Number(part2(input)),
     }
 }
+
+/// solves the problem for day 9
+fn day9(input: &str, part: Part) -> Solution {
+    enum Direction {
+        Left,
+        Right,
+        Up,
+        Down,
+    }
+    impl FromStr for Direction {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s {
+                "L" => Ok(Direction::Left),
+                "R" => Ok(Direction::Right),
+                "U" => Ok(Direction::Up),
+                "D" => Ok(Direction::Down),
+                _ => Err(()),
+            }
+        }
+    }
+    fn part1(input: &str) -> usize {
+        let (mut head, mut tail) = ((0, 0), (0, 0));
+        let mut positions = HashSet::new();
+        positions.insert(tail);
+        for (direction, distance) in input
+            .split_terminator('\n')
+            .map(|motion| {
+                motion
+                    .split_once(' ')
+                    .expect("no space in line to split on")
+            })
+            .map(|(dir, dist)| {
+                (
+                    dir.parse::<Direction>().unwrap(),
+                    dist.parse::<usize>().unwrap(),
+                )
+            })
+        {
+            let head_offset = match direction {
+                Direction::Left => (-1, 0),
+                Direction::Right => (1, 0),
+                Direction::Up => (0, 1),
+                Direction::Down => (0, -1),
+            };
+            for _ in 0..distance {
+                // move head
+                head = (head.0 + head_offset.0, head.1 + head_offset.1);
+                // move tail to catch up if needed
+                let tail_offset = (head.0 - tail.0, head.1 - tail.1);
+                match tail_offset {
+                    (x, 0) if isize::abs(x) > 1 => {
+                        tail.0 += isize::abs(x) / x;
+                    }
+                    (0, y) if isize::abs(y) > 1 => {
+                        tail.1 += isize::abs(y) / y;
+                    }
+                    (x, y) if isize::abs(x) > 1 => {
+                        tail.0 += isize::abs(x) / x;
+                        tail.1 += y;
+                    }
+                    (x, y) if isize::abs(y) > 1 => {
+                        tail.0 += x;
+                        tail.1 += isize::abs(y) / y;
+                    }
+                    (x, y) if isize::abs(x) <= 1 && isize::abs(y) <= 1 => {
+                        // tail is still adjacent to head after head moved, so tail stays put
+                    }
+                    other => {
+                        panic!("uhoh, tail detached from head: {:?}", other)
+                    }
+                }
+                positions.insert(tail);
+            }
+        }
+        positions.len()
+    }
+    match part {
+        Part::One => Solution::Number(part1(input)),
+        Part::Two => Solution::Number(0),
+    }
+}
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let days = [day1, day2, day3, day4, day5, day6, day7, day8];
-    let today = 8;
+    let days = [day1, day2, day3, day4, day5, day6, day7, day8, day9];
+    let today = 9;
     let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
