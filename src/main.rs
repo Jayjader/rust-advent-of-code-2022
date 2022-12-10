@@ -37,13 +37,17 @@ impl Error for PartParseError {}
 
 #[derive(Debug)]
 enum Solution {
-    Number(usize),
+    UNumber(usize),
+    INumber(isize),
     String(String),
 }
 impl Display for Solution {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Solution::Number(n) => {
+            Solution::UNumber(n) => {
+                write!(f, "{}", n)
+            }
+            Solution::INumber(n) => {
                 write!(f, "{}", n)
             }
             Solution::String(s) => {
@@ -94,8 +98,8 @@ fn day1(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
@@ -218,8 +222,8 @@ fn day2(input: &str, part: Part) -> Solution {
         })
     }
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
@@ -277,8 +281,8 @@ fn day3(input: &str, part: Part) -> Solution {
             .sum()
     }
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
@@ -333,8 +337,8 @@ fn day4(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
@@ -443,8 +447,8 @@ fn day6(input: &str, part: Part) -> Solution {
         slide_window_until_unique::<14>(input)
     }
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
@@ -614,8 +618,8 @@ fn day7(input: &str, part: Part) -> Solution {
             .unwrap()
     }
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
@@ -761,8 +765,8 @@ fn day8(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
@@ -886,14 +890,64 @@ fn day9(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::Number(part1(input)),
-        Part::Two => Solution::Number(part2(input)),
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
+
+/// solves the problem for day 10
+fn day10(input: &str, part: Part) -> Solution {
+    #[derive(Debug)]
+    enum Instruction {
+        Noop,
+        AddX(i32),
+    }
+    impl FromStr for Instruction {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.chars().take(4).collect::<String>().as_str() {
+                "noop" => Ok(Instruction::Noop),
+                "addx" => Ok(Instruction::AddX(s.split_at(5).1.parse::<i32>().unwrap())),
+                _ => Err(()),
+            }
+        }
+    }
+    fn part1(input: &str) -> isize {
+        let (_, _, reg_per_cycle) = input
+            .lines()
+            .flat_map(|line| line.parse::<Instruction>())
+            .fold(
+                (0, 1, Vec::<i32>::with_capacity(240)),
+                |(cycle, register, mut output), instruction| match instruction {
+                    Instruction::Noop => {
+                        output.push(register);
+                        (cycle + 1, register, output)
+                    }
+                    Instruction::AddX(x) => {
+                        output.push(register);
+                        output.push(register);
+                        (cycle + 2, register + x, output)
+                    }
+                },
+            );
+        (20 * reg_per_cycle[20 - 1]
+            + 60 * reg_per_cycle[60 - 1]
+            + 100 * reg_per_cycle[100 - 1]
+            + 140 * reg_per_cycle[140 - 1]
+            + 180 * reg_per_cycle[180 - 1]
+            + 220 * reg_per_cycle[220 - 1]) as isize
+    }
+    match part {
+        Part::One => Solution::INumber(part1(input)),
+        Part::Two => Solution::UNumber(0),
+    }
+}
+
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let days = [day1, day2, day3, day4, day5, day6, day7, day8, day9];
-    let today = 9;
+    let days = [day1, day2, day3, day4, day5, day6, day7, day8, day9, day10];
+    let today = 10;
     let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
