@@ -35,6 +35,7 @@ impl Display for PartParseError {
 
 impl Error for PartParseError {}
 
+/// Solution is either a usize, isize, or string
 #[derive(Debug)]
 enum Solution {
     UNumber(usize),
@@ -938,9 +939,50 @@ fn day10(input: &str, part: Part) -> Solution {
             + 180 * reg_per_cycle[180 - 1]
             + 220 * reg_per_cycle[220 - 1]) as isize
     }
+    fn part2(input: &str) -> usize {
+        fn print_screen(screen: &Vec<Vec<&str>>) {
+            for line in screen {
+                println!("{}", line.join(""));
+            }
+        }
+        fn screen_coords_during_cycle(cycle: usize) -> (usize, usize) {
+            (cycle % 40, cycle / 40)
+        }
+        let mut screen = vec![vec!["."; 40]; 6];
+        let (_, _, _) = input
+            .lines()
+            .flat_map(|line| line.parse::<Instruction>())
+            .fold(
+                (0isize, 1isize, Vec::<isize>::with_capacity(240)),
+                |(cycle, register, mut output), instruction| {
+                    let (x, y) = screen_coords_during_cycle(cycle as usize);
+                    if [register - 1, register, register + 1].contains(&(x as isize)) {
+                        screen[y][x] = "#"
+                    }
+                    match instruction {
+                        Instruction::Noop => {
+                            output.push(register);
+                            (cycle + 1, register, output)
+                        }
+                        Instruction::AddX(X) => {
+                            output.push(register);
+                            output.push(register);
+                            let (x, y) = screen_coords_during_cycle((cycle + 1) as usize);
+                            if [register - 1, register, register + 1].contains(&(x as isize)) {
+                                screen[y][x] = "#"
+                            }
+                            (cycle + 2, register + X as isize, output)
+                        }
+                    }
+                },
+            );
+        print_screen(&screen);
+        0
+    }
+
     match part {
         Part::One => Solution::INumber(part1(input)),
-        Part::Two => Solution::UNumber(0),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
