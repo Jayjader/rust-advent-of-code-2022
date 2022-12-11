@@ -939,12 +939,7 @@ fn day10(input: &str, part: Part) -> Solution {
             + 180 * reg_per_cycle[180 - 1]
             + 220 * reg_per_cycle[220 - 1]) as isize
     }
-    fn part2(input: &str) -> usize {
-        fn print_screen(screen: &Vec<Vec<&str>>) {
-            for line in screen {
-                println!("{}", line.join(""));
-            }
-        }
+    fn part2(input: &str) -> String {
         fn screen_coords_during_cycle(cycle: usize) -> (usize, usize) {
             (cycle % 40, cycle / 40)
         }
@@ -976,13 +971,16 @@ fn day10(input: &str, part: Part) -> Solution {
                     }
                 },
             );
-        print_screen(&screen);
-        0
+        screen
+            .iter()
+            .map(|line| line.join(""))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 
     match part {
         Part::One => Solution::INumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::Two => Solution::String(part2(input)),
     }
 }
 
@@ -998,7 +996,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             .expect("where's the input file? didn't find it at './input'");
         let part1 = day(&contents, Part::One);
         let part2 = day(&contents, Part::Two);
-        Ok(println!("Solutions:\nPart 1: {}, Part 2: {}", part1, part2))
+        Ok(println!(
+            "Solutions:\nPart 1:\n{}\nPart 2:\n{}",
+            part1, part2
+        ))
     } else {
         let day_index = args[1].parse::<usize>()?;
         let day = days[day_index - 1];
@@ -1006,6 +1007,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         let contents = fs::read_to_string(format!("./input/day{}.{}", day_index, prod_or_test))
             .expect("where's the input file? didn't find it at './input'");
         let solution = day(&contents, part);
-        Ok(println!("Solution: {}", solution))
+        Ok(println!("Solution:\n{}", solution))
     }
 }
