@@ -984,11 +984,126 @@ fn day10(input: &str, part: Part) -> Solution {
     }
 }
 
+/// solves the problem for day 11
+fn day11(input: &str, part: Part) -> Solution {
+    #[derive(Debug)]
+    struct Test {
+        divisor: usize,
+        true_: usize,
+        false_: usize,
+    }
+    impl FromStr for Test {
+        type Err = ();
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let (divisor, rest) = s
+                .split_once("Test: divisible by ")
+                .unwrap()
+                .1
+                .split_once('\n')
+                .unwrap();
+            let divisor = divisor.parse().unwrap();
+            let (true_, false_) = rest.split_once('\n').unwrap();
+            let true_ = true_
+                .split_once("If true: throw to monkey ")
+                .unwrap()
+                .1
+                .parse()
+                .unwrap();
+            let false_ = false_
+                .split_once("If false: throw to monkey ")
+                .unwrap()
+                .1
+                .parse()
+                .unwrap();
+
+            Ok(Test {
+                divisor,
+                true_,
+                false_,
+            })
+        }
+    }
+    #[derive(Debug)]
+    enum Arg {
+        Number(usize),
+        Old,
+    }
+    impl FromStr for Arg {
+        type Err = ();
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s {
+                "old" => Ok(Arg::Old),
+                _ => Ok(Arg::Number(s.parse().unwrap())),
+            }
+        }
+    }
+    #[derive(Debug)]
+    enum Operation {
+        Add(Arg),
+        Mult(Arg),
+    }
+    impl FromStr for Operation {
+        type Err = ();
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let data = s.split_once("Operation: new = old ").unwrap().1;
+            let (op, arg) = data.split_once(' ').unwrap();
+            let arg = arg.parse().unwrap();
+            match op {
+                "+" => Ok(Operation::Add(arg)),
+                "*" => Ok(Operation::Mult(arg)),
+                _ => Err(()),
+            }
+        }
+    }
+    #[derive(Debug)]
+    struct Monkey {
+        items: Vec<usize>,
+        operation: Operation,
+        test: Test,
+    }
+    impl FromStr for Monkey {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let (_header, rest) = s.split_once('\n').unwrap();
+            let (items, rest) = rest.split_once('\n').unwrap();
+            let items = items
+                .split_once("Starting items: ")
+                .unwrap()
+                .1
+                .split(", ")
+                .flat_map(str::parse)
+                .collect();
+            let (operation, test) = rest.split_once('\n').unwrap();
+            let operation = operation.parse().unwrap();
+            let test = test.trim().parse().unwrap();
+            Ok(Monkey {
+                items,
+                operation,
+                test,
+            })
+        }
+    }
+    fn part1(input: &str) -> usize {
+        input
+            .split_terminator("\n\n")
+            .flat_map(|monkey_input| monkey_input.parse::<Monkey>())
+            .for_each(|m| println!("{:?}", m));
+        0
+    }
+    match part {
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::String(String::from("Not implemented")),
+    }
+}
+
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
-    let days = [day1, day2, day3, day4, day5, day6, day7, day8, day9, day10];
-    let today = 10;
-    let prod_or_test = "prod";
+    let days = [
+        day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11,
+    ];
+    let today = 11;
+    let prod_or_test = "test";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
