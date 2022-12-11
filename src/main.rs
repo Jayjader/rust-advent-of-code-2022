@@ -959,14 +959,14 @@ fn day10(input: &str, part: Part) -> Solution {
                             output.push(register);
                             (cycle + 1, register, output)
                         }
-                        Instruction::AddX(X) => {
+                        Instruction::AddX(x_arg) => {
                             output.push(register);
                             output.push(register);
                             let (x, y) = screen_coords_during_cycle((cycle + 1) as usize);
                             if [register - 1, register, register + 1].contains(&(x as isize)) {
                                 screen[y][x] = "#"
                             }
-                            (cycle + 2, register + X as isize, output)
+                            (cycle + 2, register + x_arg as isize, output)
                         }
                     }
                 },
@@ -986,7 +986,7 @@ fn day10(input: &str, part: Part) -> Solution {
 
 /// solves the problem for day 11
 fn day11(input: &str, part: Part) -> Solution {
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     struct Test {
         divisor: usize,
         true_: usize,
@@ -1023,7 +1023,7 @@ fn day11(input: &str, part: Part) -> Solution {
             })
         }
     }
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     enum Arg {
         Number(usize),
         Old,
@@ -1037,7 +1037,7 @@ fn day11(input: &str, part: Part) -> Solution {
             }
         }
     }
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     enum Operation {
         Add(Arg),
         Mult(Arg),
@@ -1055,8 +1055,9 @@ fn day11(input: &str, part: Part) -> Solution {
             }
         }
     }
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     struct Monkey {
+        inspections: usize,
         items: Vec<usize>,
         operation: Operation,
         test: Test,
@@ -1078,18 +1079,114 @@ fn day11(input: &str, part: Part) -> Solution {
             let operation = operation.parse().unwrap();
             let test = test.trim().parse().unwrap();
             Ok(Monkey {
+                inspections: 0,
                 items,
                 operation,
                 test,
             })
         }
     }
+    fn round_recursively(
+        mut has_inspected_and_thrown: VecDeque<Monkey>,
+        mut has_not_inspected_nor_thrown: VecDeque<Monkey>,
+    ) -> (VecDeque<Monkey>, VecDeque<Monkey>) {
+        let next_monkey = has_not_inspected_nor_thrown.pop_front();
+        match next_monkey {
+            None => (has_inspected_and_thrown, has_not_inspected_nor_thrown),
+            Some(monkey) => {
+                let mut next_monkey = Monkey { ..monkey };
+                next_monkey.inspections += next_monkey.items.len();
+                for item_worry in (next_monkey.items).iter() {
+                    println!(
+                        "  Monkey inspects an item with a worry level of {}.",
+                        item_worry
+                    );
+                    // -> apply operation
+                    print!("    Worry level "); // is multiplied by 19 to 1501.");
+                    let item_worry = match &monkey.operation {
+                        Operation::Add(arg) => {
+                            print!("increases by ");
+                            match arg {
+                                Arg::Number(n) => {
+                                    print!("{}", n);
+                                    item_worry + n
+                                }
+                                Arg::Old => {
+                                    print!("{}", item_worry);
+                                    item_worry + item_worry
+                                }
+                            }
+                        }
+                        Operation::Mult(arg) => {
+                            print!("is multiplied by ");
+                            match arg {
+                                Arg::Number(n) => {
+                                    print!("{}", n);
+                                    item_worry * n
+                                }
+                                Arg::Old => {
+                                    print!("{}", item_worry);
+                                    item_worry * item_worry
+                                }
+                            }
+                        }
+                    };
+                    println!(" to {}", item_worry);
+                    // -> reduce by 3, rounded down
+                    let item_worry = item_worry / 3;
+                    println!(
+                        "    Monkey gets bored with item. Worry level is divided by 3 to {}.",
+                        item_worry
+                    );
+                    print!("    Current worry level is ");
+                    let receiver_index = if item_worry % monkey.test.divisor == 0 {
+                        monkey.test.true_
+                    } else {
+                        print!("not");
+                        monkey.test.false_
+                    };
+                    println!(" divisible by {}.", monkey.test.divisor);
+                    println!(
+                        "    Item with worry level {} is thrown to monkey {}",
+                        item_worry, receiver_index
+                    );
+                    if receiver_index >= has_inspected_and_thrown.len() {
+                        // dbg!(&(has_not_inspected_nor_thrown));
+                        has_not_inspected_nor_thrown
+                            [receiver_index - has_inspected_and_thrown.len() - 1]
+                            .items
+                            .push(item_worry);
+                    } else {
+                        // dbg!(&(has_inspected_and_thrown));
+                        has_inspected_and_thrown[receiver_index]
+                            .items
+                            .push(item_worry);
+                    }
+                }
+                next_monkey.items.clear();
+
+                has_inspected_and_thrown.push_back(next_monkey);
+                round_recursively(has_inspected_and_thrown, has_not_inspected_nor_thrown)
+            }
+        }
+    }
     fn part1(input: &str) -> usize {
-        input
+        let mut monkeys = dbg!(input
             .split_terminator("\n\n")
             .flat_map(|monkey_input| monkey_input.parse::<Monkey>())
-            .for_each(|m| println!("{:?}", m));
-        0
+            .collect::<VecDeque<_>>());
+        for i in 1..21 {
+            println!("round {}", i);
+            monkeys = round_recursively(VecDeque::with_capacity(monkeys.len()), monkeys).0;
+            dbg!(&monkeys);
+        }
+        dbg!(&monkeys);
+        let mut monkeys = monkeys.into_iter().collect::<Vec<_>>();
+        monkeys.sort_by(|m0, m1| m1.inspections.cmp(&m0.inspections));
+        monkeys
+            .iter()
+            .take(2)
+            .fold(1, |product, m| m.inspections * product)
     }
     match part {
         Part::One => Solution::UNumber(part1(input)),
@@ -1103,7 +1200,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11,
     ];
     let today = 11;
-    let prod_or_test = "test";
+    let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
