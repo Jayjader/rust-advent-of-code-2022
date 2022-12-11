@@ -39,6 +39,7 @@ impl Error for PartParseError {}
 #[derive(Debug)]
 enum Solution {
     UNumber(usize),
+    U64Number(u64),
     INumber(isize),
     String(String),
 }
@@ -53,6 +54,9 @@ impl Display for Solution {
             }
             Solution::String(s) => {
                 write!(f, "{}", s)
+            }
+            Solution::U64Number(n) => {
+                write!(f, "{}", n)
             }
         }
     }
@@ -988,7 +992,7 @@ fn day10(input: &str, part: Part) -> Solution {
 fn day11(input: &str, part: Part) -> Solution {
     #[derive(Debug, Clone, Copy)]
     struct Test {
-        divisor: usize,
+        divisor: u64,
         true_: usize,
         false_: usize,
     }
@@ -1025,7 +1029,7 @@ fn day11(input: &str, part: Part) -> Solution {
     }
     #[derive(Debug, Clone, Copy)]
     enum Arg {
-        Number(usize),
+        Number(u64),
         Old,
     }
     impl FromStr for Arg {
@@ -1058,7 +1062,7 @@ fn day11(input: &str, part: Part) -> Solution {
     #[derive(Debug, Clone)]
     struct Monkey {
         inspections: usize,
-        items: Vec<usize>,
+        items: Vec<u64>,
         operation: Operation,
         test: Test,
     }
@@ -1188,9 +1192,140 @@ fn day11(input: &str, part: Part) -> Solution {
             .take(2)
             .fold(1, |product, m| m.inspections * product)
     }
+
+    fn round_recursively_ridiculous_levels(
+        divisor_product: u64,
+        mut has_inspected_and_thrown: VecDeque<Monkey>,
+        mut has_not_inspected_nor_thrown: VecDeque<Monkey>,
+    ) -> (VecDeque<Monkey>, VecDeque<Monkey>) {
+        let next_monkey = has_not_inspected_nor_thrown.pop_front();
+        match next_monkey {
+            None => (has_inspected_and_thrown, has_not_inspected_nor_thrown),
+            Some(monkey) => {
+                let mut next_monkey = Monkey { ..monkey };
+                next_monkey.inspections += next_monkey.items.len();
+                for item_worry in (next_monkey.items).iter() {
+                    // println!(
+                    //     "  Monkey inspects an item with a worry level of {}.",
+                    //     item_worry
+                    // );
+                    // print!("    Worry level "); // is multiplied by 19 to 1501.");
+                    let item_worry = match &monkey.operation {
+                        Operation::Add(arg) => {
+                            // print!("increases by ");
+                            match arg {
+                                Arg::Number(n) => {
+                                    // print!("{}", n);
+                                    item_worry + n
+                                }
+                                Arg::Old => {
+                                    // print!("{}", item_worry);
+                                    item_worry + item_worry
+                                }
+                            }
+                        }
+                        Operation::Mult(arg) => {
+                            // print!("is multiplied by ");
+                            match arg {
+                                Arg::Number(n) => {
+                                    let post_mod = (*n % divisor_product);
+                                    // print!("{} (actually {})", n, post_mod);
+                                    (item_worry * post_mod) % divisor_product
+                                }
+                                Arg::Old => {
+                                    let post_mod = (item_worry % divisor_product);
+                                    // print!("{} (actually {})", item_worry, post_mod);
+                                    (item_worry * (item_worry % divisor_product)) % divisor_product
+                                }
+                            }
+                        }
+                    };
+                    // println!(" to {}", item_worry);
+                    // -> reduce by 3, rounded down
+                    // let item_worry = item_worry / 3;
+                    // println!(
+                    //     "    Monkey gets bored with item. Worry level is divided by 3 to {}.",
+                    //     item_worry
+                    // );
+                    // print!("    Current worry level is ");
+                    let receiver_index = if item_worry % monkey.test.divisor == 0 {
+                        monkey.test.true_
+                    } else {
+                        // print!("not");
+                        monkey.test.false_
+                    };
+                    // println!(" divisible by {}.", monkey.test.divisor);
+                    // println!(
+                    //     "    Item with worry level {} is thrown to monkey {}",
+                    //     item_worry, receiver_index
+                    // );
+                    if receiver_index >= has_inspected_and_thrown.len() {
+                        // dbg!(&(has_not_inspected_nor_thrown));
+                        has_not_inspected_nor_thrown
+                            [receiver_index - has_inspected_and_thrown.len() - 1]
+                            .items
+                            .push(item_worry);
+                    } else {
+                        // dbg!(&(has_inspected_and_thrown));
+                        has_inspected_and_thrown[receiver_index]
+                            .items
+                            .push(item_worry);
+                    }
+                }
+                next_monkey.items.clear();
+
+                has_inspected_and_thrown.push_back(next_monkey);
+                round_recursively_ridiculous_levels(
+                    divisor_product,
+                    has_inspected_and_thrown,
+                    has_not_inspected_nor_thrown,
+                )
+            }
+        }
+    }
+    fn part2(input: &str) -> usize {
+        let mut monkeys = input
+            .split_terminator("\n\n")
+            .flat_map(|monkey_input| monkey_input.parse::<Monkey>())
+            .collect::<VecDeque<_>>();
+        let divisor_product: u64 = monkeys
+            .iter()
+            .map(|m| {
+                // print!(" {} ", m.test.divisor);
+                m.test.divisor
+            })
+            .product();
+        // println!(" * = {} ", divisor_product);
+        for i in 1..10_001 {
+            monkeys = round_recursively_ridiculous_levels(
+                divisor_product,
+                VecDeque::with_capacity(monkeys.len()),
+                monkeys,
+            )
+            .0;
+            if [
+                1, 20, 1_000, 2_000, 3_000, 4_000, 5_000, 6_000, 7_000, 9_000, 10_000,
+            ]
+            .contains(&i)
+            {
+                println!("\n== After round {} ==", i);
+                for (i, m) in monkeys.iter().enumerate() {
+                    println!("Monkey {} inspected items {} times", i, m.inspections);
+                }
+            }
+            // dbg!(&monkeys);
+        }
+        // dbg!(&monkeys);
+        let mut monkeys = monkeys.into_iter().collect::<Vec<_>>();
+        monkeys.sort_by(|m0, m1| m1.inspections.cmp(&m0.inspections));
+        monkeys
+            .iter()
+            .take(2)
+            .fold(1, |product, m| m.inspections * product)
+    }
     match part {
         Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::String(String::from("Not implemented")),
+        Part::Two => Solution::UNumber(part2(input)),
     }
 }
 
