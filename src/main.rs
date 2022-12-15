@@ -1322,7 +1322,7 @@ fn day13(input: &str, part: Part) -> Solution {
                 &"[" => {
                     let new_list = Vec::new();
 
-                    let (updated_new_list, rest) = simple_rec(new_list, &rest);
+                    let (updated_new_list, rest) = simple_rec(new_list, rest);
                     result.push(PacketData::List(updated_new_list));
                     simple_rec(result, rest.unwrap())
                 }
@@ -1344,21 +1344,21 @@ fn day13(input: &str, part: Part) -> Solution {
             Ordering::Less => Ordering::Less,
             Ordering::Equal => match (p1, p2) {
                 (PacketData::Int(self_int), PacketData::Int(other_int)) => {
-                    println!("  - Compare {} vs {}", self_int, other_int);
+                    // println!("  - Compare {} vs {}", self_int, other_int);
                     let result = self_int.cmp(other_int);
-                    match result {
-                        Ordering::Less => {
-                            println!(
-                                "    - Left side is smaller, so inputs are in the right order"
-                            );
-                        }
-                        Ordering::Greater => {
-                            println!(
-                                "    - Right side is smaller, so inputs are not in the right order"
-                            );
-                        }
-                        _ => {}
-                    };
+                    // match result {
+                    //     Ordering::Less => {
+                    //         println!(
+                    //             "    - Left side is smaller, so inputs are in the right order"
+                    //         );
+                    //     }
+                    //     Ordering::Greater => {
+                    //         println!(
+                    //             "    - Right side is smaller, so inputs are not in the right order"
+                    //         );
+                    //     }
+                    //     _ => {}
+                    // };
                     result
                 }
                 (PacketData::Int(self_int), PacketData::List(_)) => in_place_ordering(
@@ -1372,19 +1372,19 @@ fn day13(input: &str, part: Part) -> Solution {
                     &PacketData::List(vec![PacketData::Int(*other_int)]),
                 ),
                 (PacketData::List(self_list), PacketData::List(other_list)) => {
-                    println!("- Compare {:?} vs {:?}", self_list, other_list);
+                    // println!("- Compare {:?} vs {:?}", self_list, other_list);
                     return match (self_list.first(), other_list.first()) {
                         (None, None) => result,
                         (None, Some(_)) => {
-                            println!(
-                                "Left side ran out of items, so inputs are in the right order"
-                            );
+                            // println!(
+                            //     "Left side ran out of items, so inputs are in the right order"
+                            // );
                             Ordering::Less
                         }
                         (Some(_), None) => {
-                            println!(
-                                "Left side ran out of items, so inputs are in the right order"
-                            );
+                            // println!(
+                            //     "Left side ran out of items, so inputs are in the right order"
+                            // );
                             Ordering::Greater
                         }
                         (Some(self_first), Some(other_first)) => {
@@ -1397,25 +1397,6 @@ fn day13(input: &str, part: Part) -> Solution {
                                     &PacketData::List(other_list.iter().skip(1).cloned().collect()),
                                 ),
                             }
-                            // return std::iter::zip(self_list, other_list).fold(
-                            //     result,
-                            //     |accu, (self_item, other_item)| {
-                            //         in_place_ordering(accu, self_item, other_item)
-                            //     },
-                            // );
-                            // match in_place_ordering(result, s_first, o_first) {
-                            //     Ordering::Less => Ordering::Less,
-                            //     Ordering::Equal => {
-                            //         let new_self = self_list.to_vec();
-                            //         let new_other = other_list.to_vec();
-                            //         in_place_ordering(
-                            //             Ordering::Equal,
-                            //             &PacketData::List(new_self),
-                            //             &PacketData::List(new_other),
-                            //         )
-                            //     }
-                            //     Ordering::Greater => Ordering::Greater,
-                            // }
                         }
                     };
                 }
@@ -1424,14 +1405,6 @@ fn day13(input: &str, part: Part) -> Solution {
     }
 
     fn part1(input: &str) -> usize {
-        // assert!(ordered(
-        //     &PacketData::List(vec![PacketData::Int(0)]),
-        //     &PacketData::List(vec![PacketData::Int(1)]),
-        // ));
-        // assert!(!ordered(
-        //     &PacketData::List(vec![PacketData::Int(1)]),
-        //     &PacketData::List(vec![PacketData::Int(0)]),
-        // ));
         input
             .split_terminator("\n\n")
             .enumerate()
@@ -1454,12 +1427,10 @@ fn day13(input: &str, part: Part) -> Solution {
                     .collect::<Vec<_>>();
                 let second_vec = Vec::new();
                 let (second, _) = simple_rec(second_vec, second.as_slice());
-                // println!("{:?}\n{:?}\n", &first.0, &second.0);
                 let first = PacketData::List(first);
                 let second = PacketData::List(second);
 
-                let correct = in_place_ordering(Ordering::Equal, &first, &second) == Ordering::Less;
-                if correct {
+                if ordered(&first, &second) {
                     println!("### {} is ordered!! ###", index + 1);
                     Some(index + 1)
                 } else {
