@@ -1440,8 +1440,39 @@ fn day13(input: &str, part: Part) -> Solution {
             .sum()
     }
 
-    fn part2(_input: &str) -> usize {
-        0
+    fn part2(input: &str) -> usize {
+        let mut packets: Vec<_> = input
+            .split_whitespace()
+            .map(|packet_str| {
+                let vec = Vec::new();
+                let tokens = tokenize(packet_str);
+                let tokens: Vec<_> = tokens.iter().skip(1).map(String::as_str).collect();
+                PacketData::List(simple_rec(vec, tokens.as_slice()).0)
+            })
+            .collect();
+        let v_two = vec![PacketData::List(vec![PacketData::Int(2)])];
+        packets.push(PacketData::List(v_two.clone()));
+        let p_compare_two = PacketData::List(v_two);
+        let v_six = vec![PacketData::List(vec![PacketData::Int(6)])];
+        packets.push(PacketData::List(v_six.clone()));
+        let p_compare_six = PacketData::List(v_six);
+        packets.sort_by(|p1, p2| in_place_ordering(Ordering::Equal, p1, p2));
+        let two_index = packets
+            .iter()
+            .enumerate()
+            .find(|p| Ordering::Equal == in_place_ordering(Ordering::Equal, p.1, &p_compare_two))
+            .unwrap()
+            .0
+            + 1;
+        let six_index = packets
+            .iter()
+            .enumerate()
+            .find(|p| Ordering::Equal == in_place_ordering(Ordering::Equal, p.1, &p_compare_six))
+            .unwrap()
+            .0
+            + 1;
+        println!("{:?}", (two_index, six_index));
+        two_index * six_index
     }
     match part {
         Part::One => Solution::UNumber(part1(input)),
