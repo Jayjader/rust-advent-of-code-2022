@@ -1343,24 +1343,7 @@ fn day13(input: &str, part: Part) -> Solution {
             Ordering::Greater => Ordering::Greater,
             Ordering::Less => Ordering::Less,
             Ordering::Equal => match (p1, p2) {
-                (PacketData::Int(self_int), PacketData::Int(other_int)) => {
-                    // println!("  - Compare {} vs {}", self_int, other_int);
-                    let result = self_int.cmp(other_int);
-                    // match result {
-                    //     Ordering::Less => {
-                    //         println!(
-                    //             "    - Left side is smaller, so inputs are in the right order"
-                    //         );
-                    //     }
-                    //     Ordering::Greater => {
-                    //         println!(
-                    //             "    - Right side is smaller, so inputs are not in the right order"
-                    //         );
-                    //     }
-                    //     _ => {}
-                    // };
-                    result
-                }
+                (PacketData::Int(self_int), PacketData::Int(other_int)) => self_int.cmp(other_int),
                 (PacketData::Int(self_int), PacketData::List(_)) => in_place_ordering(
                     result,
                     &PacketData::List(vec![PacketData::Int(*self_int)]),
@@ -1372,21 +1355,10 @@ fn day13(input: &str, part: Part) -> Solution {
                     &PacketData::List(vec![PacketData::Int(*other_int)]),
                 ),
                 (PacketData::List(self_list), PacketData::List(other_list)) => {
-                    // println!("- Compare {:?} vs {:?}", self_list, other_list);
-                    return match (self_list.first(), other_list.first()) {
+                    match (self_list.first(), other_list.first()) {
                         (None, None) => result,
-                        (None, Some(_)) => {
-                            // println!(
-                            //     "Left side ran out of items, so inputs are in the right order"
-                            // );
-                            Ordering::Less
-                        }
-                        (Some(_), None) => {
-                            // println!(
-                            //     "Left side ran out of items, so inputs are in the right order"
-                            // );
-                            Ordering::Greater
-                        }
+                        (None, Some(_)) => Ordering::Less,
+                        (Some(_), None) => Ordering::Greater,
                         (Some(self_first), Some(other_first)) => {
                             match in_place_ordering(result, self_first, other_first) {
                                 Ordering::Less => Ordering::Less,
@@ -1398,7 +1370,7 @@ fn day13(input: &str, part: Part) -> Solution {
                                 ),
                             }
                         }
-                    };
+                    }
                 }
             },
         }
@@ -1409,7 +1381,6 @@ fn day13(input: &str, part: Part) -> Solution {
             .split_terminator("\n\n")
             .enumerate()
             .flat_map(|(index, pair)| {
-                println!("== Pair {} ==", index + 1);
                 let (first, second) = pair.split_once('\n').expect("need newline between pair");
                 let tokenized_first = tokenize(first);
                 let first = tokenized_first
@@ -1431,7 +1402,6 @@ fn day13(input: &str, part: Part) -> Solution {
                 let second = PacketData::List(second);
 
                 if ordered(&first, &second) {
-                    println!("### {} is ordered!! ###", index + 1);
                     Some(index + 1)
                 } else {
                     None
