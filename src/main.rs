@@ -1457,22 +1457,17 @@ fn day13(input: &str, part: Part) -> Solution {
         packets.push(PacketData::List(v_six.clone()));
         let p_compare_six = PacketData::List(v_six);
         packets.sort_by(|p1, p2| in_place_ordering(Ordering::Equal, p1, p2));
-        let two_index = packets
+        let (two_index, _) = packets
             .iter()
             .enumerate()
             .find(|p| Ordering::Equal == in_place_ordering(Ordering::Equal, p.1, &p_compare_two))
-            .unwrap()
-            .0
-            + 1;
-        let six_index = packets
+            .unwrap();
+        let (six_index, _) = packets
             .iter()
             .enumerate()
             .find(|p| Ordering::Equal == in_place_ordering(Ordering::Equal, p.1, &p_compare_six))
-            .unwrap()
-            .0
-            + 1;
-        println!("{:?}", (two_index, six_index));
-        two_index * six_index
+            .unwrap();
+        (two_index + 1) * (six_index + 1)
     }
     match part {
         Part::One => Solution::UNumber(part1(input)),
