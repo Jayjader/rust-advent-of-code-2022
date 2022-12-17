@@ -1313,6 +1313,152 @@ fn day12(input: &str, part: Part) -> Solution {
                 map
             })
     }
+
+    /// ```
+    /// assert!(Distance::Int(0) < Distance::Infinity);
+    /// assert!(Distance::Int(10) < Distance::Int(30));
+    /// assert!(Distance::Infinity > Distance::Int(0));
+    /// ```
+    #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+    enum Distance {
+        Int(usize),
+        Infinity,
+    }
+
+    /// ```
+    /// assert!(
+    ///     Unvisited {
+    ///         position: (0, 0),
+    ///         distance: Distance::Int(0)
+    ///     } < Unvisited {
+    ///         position: (6, 0),
+    ///         distance: Distance::Infinity
+    ///     }
+    /// );
+    /// ```
+    #[derive(Debug, Eq, Clone, Copy)]
+    struct Unvisited {
+        position: (isize, isize),
+        distance: Distance,
+    }
+    impl PartialEq for Unvisited {
+        fn eq(&self, other: &Self) -> bool {
+            self.distance == other.distance
+        }
+    }
+    impl PartialOrd for Unvisited {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            self.distance.partial_cmp(&other.distance)
+        }
+
+        fn lt(&self, other: &Self) -> bool {
+            self.distance.lt(&other.distance)
+        }
+
+        fn le(&self, other: &Self) -> bool {
+            self.distance.le(&other.distance)
+        }
+
+        fn gt(&self, other: &Self) -> bool {
+            self.distance.gt(&other.distance)
+        }
+
+        fn ge(&self, other: &Self) -> bool {
+            self.distance.ge(&other.distance)
+        }
+    }
+    impl Ord for Unvisited {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.distance.cmp(&other.distance)
+        }
+
+        fn max(self, other: Self) -> Self {
+            if self.distance.max(other.distance) == self.distance {
+                self
+            } else {
+                other
+            }
+        }
+
+        fn min(self, other: Self) -> Self {
+            if self.distance.min(other.distance) == self.distance {
+                self
+            } else {
+                other
+            }
+        }
+
+        fn clamp(self, min: Self, max: Self) -> Self {
+            Self {
+                position: self.position,
+                distance: self.distance.clamp(min.distance, max.distance),
+            }
+        }
+    }
+
+    type Position = (isize, isize);
+    fn distances_to_point(
+        height_map: &HashMap<Position, (usize, char)>,
+        point: Position,
+    ) -> HashMap<Position, (Distance, Option<Position>)> {
+        let mut min_distance_precedence_map = HashMap::with_capacity(height_map.len());
+        let mut to_visit = BinaryHeap::with_capacity(height_map.len());
+        for (coords, (_height, _char)) in height_map.iter() {
+            min_distance_precedence_map.insert(
+                *coords,
+                if *coords == point {
+                    to_visit.push(Reverse(Unvisited {
+                        position: *coords,
+                        distance: Distance::Int(0),
+                    }));
+                    (Distance::Int(0), None)
+                } else {
+                    // unvisited.push(Reverse((coords, Distance::Infinity)));
+                    (Distance::Infinity, None)
+                },
+            );
+        }
+        while !to_visit.is_empty() {
+            let next_visited = to_visit.pop().unwrap();
+            let (x, y) = next_visited.0.position;
+            let (current_best_dist, _prev) = min_distance_precedence_map.get(&(x, y)).unwrap();
+            let distance_coming_from_current_visited = Distance::Int(match current_best_dist {
+                Distance::Infinity => unreachable!(),
+                Distance::Int(d) => d + 1,
+            });
+            let unvisited = HashSet::from_iter(min_distance_precedence_map.iter().filter_map(
+                |(coords, distance)| {
+                    if distance.0 == Distance::Infinity {
+                        Some(*coords)
+                    } else {
+                        None
+                    }
+                },
+            ));
+            let neighbors =
+                HashSet::<(isize, isize)>::from([(x + 1, y), (x, y + 1), (x, y - 1), (x - 1, y)]);
+            for coords in neighbors.intersection(&unvisited).cloned() {
+                let old_dist = min_distance_precedence_map.get(&coords).unwrap().0;
+                let new_dist = if height_map.get(&coords).unwrap().0 as isize
+                    - height_map.get(&(x, y)).unwrap().0 as isize
+                    <= 1isize
+                {
+                    distance_coming_from_current_visited.min(old_dist)
+                } else {
+                    Distance::Infinity
+                };
+                if new_dist < old_dist {
+                    min_distance_precedence_map.insert(coords, (new_dist, Some((x, y))));
+                    to_visit.push(Reverse(Unvisited {
+                        position: coords,
+                        distance: new_dist,
+                    }));
+                }
+            }
+        }
+        min_distance_precedence_map
+    }
+
     fn part1(input: &str) -> usize {
         let heights = parse_height_map(input);
         let start = heights
@@ -1324,151 +1470,8 @@ fn day12(input: &str, part: Part) -> Solution {
             .find(|(_coords, (_height, char))| *char == 'E')
             .unwrap();
         println!("start: {:?}; end: {:?}", &start, &end);
-        let mut distance_to_start: HashMap<(isize, isize), (Distance, Option<(isize, isize)>)> =
-            HashMap::with_capacity(heights.len());
+        let distance_to_start = distances_to_point(&heights, *start.0);
 
-        /// ```
-        /// assert!(Distance::Int(0) < Distance::Infinity);
-        /// assert!(Distance::Int(10) < Distance::Int(30));
-        /// assert!(Distance::Infinity > Distance::Int(0));
-        /// ```
-        #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-        enum Distance {
-            Int(isize),
-            Infinity,
-        }
-
-        /// ```
-        /// assert!(
-        ///     Unvisited {
-        ///         position: (0, 0),
-        ///         distance: Distance::Int(0)
-        ///     } < Unvisited {
-        ///         position: (6, 0),
-        ///         distance: Distance::Infinity
-        ///     }
-        /// );
-        /// ```
-        #[derive(Debug, Eq, Clone, Copy)]
-        struct Unvisited {
-            position: (isize, isize),
-            distance: Distance,
-        }
-        impl PartialEq for Unvisited {
-            fn eq(&self, other: &Self) -> bool {
-                self.distance == other.distance
-            }
-        }
-        impl PartialOrd for Unvisited {
-            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                self.distance.partial_cmp(&other.distance)
-            }
-
-            fn lt(&self, other: &Self) -> bool {
-                self.distance.lt(&other.distance)
-            }
-
-            fn le(&self, other: &Self) -> bool {
-                self.distance.le(&other.distance)
-            }
-
-            fn gt(&self, other: &Self) -> bool {
-                self.distance.gt(&other.distance)
-            }
-
-            fn ge(&self, other: &Self) -> bool {
-                self.distance.ge(&other.distance)
-            }
-        }
-        impl Ord for Unvisited {
-            fn cmp(&self, other: &Self) -> Ordering {
-                self.distance.cmp(&other.distance)
-            }
-
-            fn max(self, other: Self) -> Self {
-                if self.distance.max(other.distance) == self.distance {
-                    self
-                } else {
-                    other
-                }
-            }
-
-            fn min(self, other: Self) -> Self {
-                if self.distance.min(other.distance) == self.distance {
-                    self
-                } else {
-                    other
-                }
-            }
-
-            fn clamp(self, min: Self, max: Self) -> Self {
-                Self {
-                    position: self.position,
-                    distance: self.distance.clamp(min.distance, max.distance),
-                }
-            }
-        }
-
-        let mut to_visit = BinaryHeap::with_capacity(heights.len());
-        for (coords, (_height, char)) in heights.iter() {
-            distance_to_start.insert(
-                *coords,
-                match char {
-                    'S' => {
-                        to_visit.push(Reverse(Unvisited {
-                            position: *coords,
-                            distance: Distance::Int(0),
-                        }));
-                        (Distance::Int(0), None)
-                    }
-                    _ => {
-                        // unvisited.push(Reverse((coords, Distance::Infinity)));
-                        (Distance::Infinity, None)
-                    }
-                },
-            );
-        }
-        while !to_visit.is_empty() {
-            let next_visited = to_visit.pop().unwrap();
-            let (x, y) = next_visited.0.position;
-            let (current_best_dist, _prev) = distance_to_start.get(&(x, y)).unwrap();
-            let distance_coming_from_current_visited = Distance::Int(match current_best_dist {
-                Distance::Infinity => unreachable!(),
-                Distance::Int(d) => d + 1,
-            });
-            let unvisited =
-                HashSet::from_iter(distance_to_start.iter().filter_map(|(coords, distance)| {
-                    if distance.0 == Distance::Infinity {
-                        Some(*coords)
-                    } else {
-                        None
-                    }
-                }));
-            let neighbors =
-                HashSet::<(isize, isize)>::from([(x + 1, y), (x, y + 1), (x, y - 1), (x - 1, y)]);
-            for coords in neighbors.intersection(&unvisited).cloned() {
-                let old_dist = distance_to_start.get(&coords).unwrap().0;
-                let new_dist = if heights.get(&coords).unwrap().0 as isize
-                    - heights.get(&(x, y)).unwrap().0 as isize
-                    <= 1isize
-                {
-                    distance_coming_from_current_visited.min(old_dist)
-                } else {
-                    Distance::Infinity
-                };
-                if new_dist < old_dist {
-                    // println!(
-                    //     "new shortest path to ({},{}) found (dist={:?}, prev=({},{})",
-                    //     coords.0, coords.1, new_dist, x, y
-                    // );
-                    distance_to_start.insert(coords, (new_dist, Some((x, y))));
-                    to_visit.push(Reverse(Unvisited {
-                        position: coords,
-                        distance: new_dist,
-                    }));
-                }
-            }
-        }
         let mut path_to_end = Vec::new();
         let mut head_of_path = *end.0;
         loop {
@@ -1480,9 +1483,17 @@ fn day12(input: &str, part: Part) -> Solution {
             }
         }
 
-        path_to_end.len() - 1
+        match distance_to_start.get(end.0).unwrap().0 {
+            Distance::Infinity => unreachable!(),
+            Distance::Int(dist) => dist,
+        }
     }
-    fn part2(_input: &str) -> usize {
+    fn part2(input: &str) -> usize {
+        let heights = parse_height_map(input);
+        let starting_positions = heights
+            .iter()
+            .filter(|(_coords, (height, _prev))| *height == 26)
+            .collect::<Vec<_>>();
         0
     }
     match part {
