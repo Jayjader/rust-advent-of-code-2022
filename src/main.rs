@@ -1492,9 +1492,26 @@ fn day12(input: &str, part: Part) -> Solution {
         let heights = parse_height_map(input);
         let starting_positions = heights
             .iter()
-            .filter(|(_coords, (height, _prev))| *height == 26)
+            .filter(|(_coords, (height, _prev))| *height == 1)
+            .map(|(coords, (_height, _prev))| coords)
             .collect::<Vec<_>>();
-        0
+        println!("{} starting positions found.", starting_positions.len());
+        let end = heights
+            .iter()
+            .find(|(_coords, (_height, char))| *char == 'E')
+            .unwrap()
+            .0;
+        starting_positions
+            .iter()
+            .flat_map(|coords| {
+                let distances = distances_to_point(&heights, **coords);
+                match distances.get(end).unwrap().0 {
+                    Distance::Int(dist) => Some(dist),
+                    Distance::Infinity => None,
+                }
+            })
+            .min()
+            .unwrap()
     }
     match part {
         Part::One => Solution::UNumber(part1(input)),
