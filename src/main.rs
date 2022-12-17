@@ -1326,11 +1326,29 @@ fn day12(input: &str, part: Part) -> Solution {
         println!("start: {:?}; end: {:?}", &start, &end);
         let mut distance_to_start: HashMap<(isize, isize), (Distance, Option<(isize, isize)>)> =
             HashMap::with_capacity(heights.len());
+
+        /// ```
+        /// assert!(Distance::Int(0) < Distance::Infinity);
+        /// assert!(Distance::Int(10) < Distance::Int(30));
+        /// assert!(Distance::Infinity > Distance::Int(0));
+        /// ```
         #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
         enum Distance {
             Int(isize),
             Infinity,
         }
+
+        /// ```
+        /// assert!(
+        ///     Unvisited {
+        ///         position: (0, 0),
+        ///         distance: Distance::Int(0)
+        ///     } < Unvisited {
+        ///         position: (6, 0),
+        ///         distance: Distance::Infinity
+        ///     }
+        /// );
+        /// ```
         #[derive(Debug, Eq, Clone, Copy)]
         struct Unvisited {
             position: (isize, isize),
@@ -1390,6 +1408,7 @@ fn day12(input: &str, part: Part) -> Solution {
                 }
             }
         }
+
         let mut to_visit = BinaryHeap::with_capacity(heights.len());
         for (coords, (_height, char)) in heights.iter() {
             distance_to_start.insert(
@@ -1460,19 +1479,7 @@ fn day12(input: &str, part: Part) -> Solution {
                 break;
             }
         }
-        println!("shortest path to start from end: {:?}", path_to_end);
-        assert!(Distance::Int(0) < Distance::Infinity);
-        assert!(Distance::Int(10) < Distance::Int(30));
-        assert!(Distance::Infinity > Distance::Int(0));
-        assert!(
-            Unvisited {
-                position: (0, 0),
-                distance: Distance::Int(0)
-            } < Unvisited {
-                position: (6, 0),
-                distance: Distance::Infinity
-            }
-        );
+
         path_to_end.len() - 1
     }
     fn part2(_input: &str) -> usize {
