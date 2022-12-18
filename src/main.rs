@@ -1868,8 +1868,51 @@ fn day14(input: &str, part: Part) -> Solution {
         sand_units
     }
 
-    fn part2(_input: &str) -> usize {
-        0
+    fn part2(input: &str) -> usize {
+        let (mut map, ((min_x, mut min_y), (max_x, max_y))) = parse_input_paths(input);
+        min_y = min_y.min(0);
+        println!(
+            "dimension bounds: ({}, {}) -> ({}, {})",
+            min_x, min_y, max_x, max_y
+        );
+        // print_map(&map, min_x, min_y, max_x, max_y);
+        let mut frame_index = 0;
+        let mut pouring_sand_path: Vec<Position> = vec![(500, 0)];
+        let mut sand_units = 0;
+        loop {
+            let output_file =
+                File::create(format!("./output/frame{}.ppm", frame_index).as_str()).unwrap();
+            write_map(output_file, &map, min_x, min_y, max_x, max_y);
+            frame_index += 1;
+            let last = pouring_sand_path.last();
+            if last.is_none() {
+                break;
+            }
+            let (x, y) = last.unwrap();
+            // reached floor ?
+            if *y > max_y {
+                map.insert((*x, *y), Solid::Sand);
+                map.insert((*x, *y + 1), Solid::Rock);
+                pouring_sand_path.pop();
+                sand_units += 1;
+            } else if map.get(&(*x, *y + 1)).is_none() {
+                // fall straight down
+                pouring_sand_path.push((*x, *y + 1));
+            } else if map.get(&(*x - 1, *y + 1)).is_none() {
+                // fall down and to the left
+                pouring_sand_path.push((*x - 1, *y + 1));
+            } else if map.get(&(*x + 1, *y + 1)).is_none() {
+                // fall down and to the right
+                pouring_sand_path.push((*x + 1, *y + 1));
+            } else {
+                // come to rest here / next unit of sand
+                map.insert((*x, *y), Solid::Sand);
+                pouring_sand_path.pop();
+                sand_units += 1;
+            }
+        }
+        // print_map(&map, min_x, min_y, max_x, max_y);
+        sand_units
     }
     match part {
         Part::One => Solution::UNumber(part1(input)),
