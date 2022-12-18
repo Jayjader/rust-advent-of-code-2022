@@ -1742,11 +1742,9 @@ fn day14(input: &str, part: Part) -> Solution {
             .fold(
                 (HashMap::new(), ((500, 0), (500, 0))),
                 |(mut map, ((mut min_x, mut min_y), (mut max_x, mut max_y))), path| {
-                    // println!("=== new path ===");
                     for pair in path.windows(2) {
                         let start = pair.first().unwrap();
                         let end = pair.last().unwrap();
-                        // dbg!((end, start));
                         if start.0 == end.0 {
                             // vertical segment
                             let diff = end.1 as isize - start.1 as isize;
@@ -1754,7 +1752,6 @@ fn day14(input: &str, part: Part) -> Solution {
                             for dy in 0..=diff.abs() {
                                 let y = (start.1 as isize + dy * dir) as usize;
                                 map.insert((start.0, y), Solid::Rock);
-                                // println!("vert path segment: ({},{})", start.0, y);
                             }
                         } else {
                             // horizontal segment
@@ -1762,7 +1759,6 @@ fn day14(input: &str, part: Part) -> Solution {
                             for dx in 0..=(end.0 as isize - start.0 as isize).abs() {
                                 let x = (start.0 as isize + dx * dir) as usize;
                                 map.insert((x, start.1), Solid::Rock);
-                                // println!("horiz path segment: ({},{})", x, start.1);
                             }
                         }
                         max_y = max_y.max(start.1.max(end.1));
@@ -1774,30 +1770,6 @@ fn day14(input: &str, part: Part) -> Solution {
                 },
             )
     }
-    // fn print_map(
-    //     map: &HashMap<Position, Solid>,
-    //     min_x: usize,
-    //     min_y: usize,
-    //     max_x: usize,
-    //     max_y: usize,
-    // ) {
-    //     println!("=== Map ===");
-    //     for y in min_y..=(max_y + 10) {
-    //         for x in (min_x - 20)..=(max_x + 20) {
-    //             print!(
-    //                 "{}",
-    //                 match map.get(&(x, y)) {
-    //                     None => '.',
-    //                     Some(solid) => match solid {
-    //                         Solid::Rock => '#',
-    //                         Solid::Sand => 'O',
-    //                     },
-    //                 }
-    //             );
-    //         }
-    //         println!();
-    //     }
-    // }
     fn write_map(
         mut output_file: File,
         map: &HashMap<Position, Solid>,
@@ -1830,11 +1802,6 @@ fn day14(input: &str, part: Part) -> Solution {
     fn part1(input: &str) -> usize {
         let (mut map, ((min_x, mut min_y), (max_x, max_y))) = parse_input_paths(input);
         min_y = min_y.min(0);
-        println!(
-            "dimension bounds: ({}, {}) -> ({}, {})",
-            min_x, min_y, max_x, max_y
-        );
-        // print_map(&map, min_x, min_y, max_x, max_y);
         let mut frame_index = 0;
         let mut pouring_sand_path: Vec<Position> = vec![(500, 0)];
         let mut sand_units = 0;
@@ -1864,18 +1831,12 @@ fn day14(input: &str, part: Part) -> Solution {
                 sand_units += 1;
             }
         }
-        // print_map(&map, min_x, min_y, max_x, max_y);
         sand_units
     }
 
     fn part2(input: &str) -> usize {
         let (mut map, ((min_x, mut min_y), (max_x, max_y))) = parse_input_paths(input);
         min_y = min_y.min(0);
-        println!(
-            "dimension bounds: ({}, {}) -> ({}, {})",
-            min_x, min_y, max_x, max_y
-        );
-        // print_map(&map, min_x, min_y, max_x, max_y);
         let mut frame_index = 0;
         let mut pouring_sand_path: Vec<Position> = vec![(500, 0)];
         let mut sand_units = 0;
@@ -1885,11 +1846,12 @@ fn day14(input: &str, part: Part) -> Solution {
             write_map(output_file, &map, min_x, min_y, max_x, max_y);
             frame_index += 1;
             let last = pouring_sand_path.last();
+            // filled input?
             if last.is_none() {
                 break;
             }
             let (x, y) = last.unwrap();
-            // reached floor ?
+            // reached floor?
             if *y > max_y {
                 map.insert((*x, *y), Solid::Sand);
                 map.insert((*x, *y + 1), Solid::Rock);
@@ -1911,7 +1873,6 @@ fn day14(input: &str, part: Part) -> Solution {
                 sand_units += 1;
             }
         }
-        // print_map(&map, min_x, min_y, max_x, max_y);
         sand_units
     }
     match part {
