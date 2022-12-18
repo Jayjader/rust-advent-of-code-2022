@@ -4,6 +4,8 @@ use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
+use std::io::Write;
 use std::iter::Map;
 use std::str::{FromStr, Split};
 use std::{env, fs};
@@ -1291,8 +1293,11 @@ fn day11(input: &str, part: Part) -> Solution {
 
 /// solves the problem for day 12
 fn day12(input: &str, part: Part) -> Solution {
-    fn parse_height_map(input: &str) -> HashMap<(isize, isize), (usize, char)> {
-        input
+    type Position = (isize, isize);
+    fn parse_height_map(input: &str) -> (HashMap<Position, (usize, char)>, (usize, usize)) {
+        let width = input.find('\n').unwrap();
+        let height = input.len() / width;
+        let map = input
             .lines()
             .enumerate()
             .flat_map(|(y, line)| {
@@ -1311,7 +1316,8 @@ fn day12(input: &str, part: Part) -> Solution {
             .fold(HashMap::new(), |mut map, (coords, char, height)| {
                 map.insert(coords, (height, char));
                 map
-            })
+            });
+        (map, (width, height))
     }
 
     /// ```
@@ -1396,9 +1402,45 @@ fn day12(input: &str, part: Part) -> Solution {
         }
     }
 
-    type Position = (isize, isize);
+    fn write_distance_map(
+        mut output_file: File,
+        map: &HashMap<Position, (Distance, Option<Position>)>,
+        dimensions: (usize, usize),
+    ) {
+        let (width, height) = dimensions;
+        let max_dist = map
+            .iter()
+            .flat_map(|(_coords, (dist, _))| match dist {
+                Distance::Int(dist) => Some(dist),
+                Distance::Infinity => None,
+            })
+            .max()
+            .unwrap()
+            .max(&255);
+        println!("max dist: {}", max_dist);
+        output_file
+            .write_all(format!("P3\n{} {}\n{}\n", width, height, 255).as_bytes())
+            .unwrap();
+        for y in 0..height {
+            let line: Vec<_> =
+                ((0..width).map(|x| match map.get(&(x as isize, y as isize)).unwrap().0 {
+                    Distance::Int(dist) => {
+                        let normalized_dist = dist * 255 / max_dist;
+                        format!(
+                            "{} {} {}",
+                            normalized_dist, normalized_dist, normalized_dist
+                        )
+                    }
+                    Distance::Infinity => String::from("255 127 0"),
+                }))
+                .collect();
+            let line = line.join(" ") + "\n";
+            output_file.write_all(line.as_bytes()).unwrap();
+        }
+    }
     fn distances_to_point(
         height_map: &HashMap<Position, (usize, char)>,
+        dimensions: (usize, usize),
         point: Position,
     ) -> HashMap<Position, (Distance, Option<Position>)> {
         let mut min_distance_precedence_map = HashMap::with_capacity(height_map.len());
@@ -1418,7 +1460,12 @@ fn day12(input: &str, part: Part) -> Solution {
                 },
             );
         }
+        let mut frame_index = 0;
         while !to_visit.is_empty() {
+            println!("=== frame {} ===", frame_index);
+            let output_file =
+                File::create(format!("./output/frame{}.ppm", frame_index).as_str()).unwrap();
+            write_distance_map(output_file, &min_distance_precedence_map, dimensions);
             let next_visited = to_visit.pop().unwrap();
             let (x, y) = next_visited.0.position;
             let (current_best_dist, _prev) = min_distance_precedence_map.get(&(x, y)).unwrap();
@@ -1455,12 +1502,13 @@ fn day12(input: &str, part: Part) -> Solution {
                     }));
                 }
             }
+            frame_index += 1;
         }
         min_distance_precedence_map
     }
 
     fn part1(input: &str) -> usize {
-        let heights = parse_height_map(input);
+        let (heights, dimensions) = parse_height_map(input);
         let start = heights
             .iter()
             .find(|(_coords, (_height, char))| *char == 'S')
@@ -1470,7 +1518,8 @@ fn day12(input: &str, part: Part) -> Solution {
             .find(|(_coords, (_height, char))| *char == 'E')
             .unwrap();
         println!("start: {:?}; end: {:?}", &start, &end);
-        let distance_to_start = distances_to_point(&heights, *start.0);
+        println!("dimensions: {:?}", dimensions);
+        let distance_to_start = distances_to_point(&heights, dimensions, *start.0);
 
         let mut path_to_end = Vec::new();
         let mut head_of_path = *end.0;
@@ -1489,7 +1538,7 @@ fn day12(input: &str, part: Part) -> Solution {
         }
     }
     fn part2(input: &str) -> usize {
-        let heights = parse_height_map(input);
+        let (heights, dimensions) = parse_height_map(input);
         let starting_positions = heights
             .iter()
             .filter(|(_coords, (height, _prev))| *height == 1)
@@ -1504,7 +1553,7 @@ fn day12(input: &str, part: Part) -> Solution {
         starting_positions
             .iter()
             .flat_map(|coords| {
-                let distances = distances_to_point(&heights, **coords);
+                let distances = distances_to_point(&heights, dimensions, **coords);
                 match distances.get(end).unwrap().0 {
                     Distance::Int(dist) => Some(dist),
                     Distance::Infinity => None,
