@@ -1917,26 +1917,10 @@ fn day20(input: &str, part: Part) -> Solution {
                     .0;
                 println!("found {} at {}", number, current_index);
                 let pair = new.remove(current_index);
-                let effective_displacement = number % (length as isize - 1);
-                println!("effective displacement: {}", effective_displacement,);
                 let new_index =
                     (current_index as isize + number).rem_euclid(length as isize - 1) as usize;
                 println!("destination index: {}", new_index);
                 new.insert(new_index, pair);
-                // let direction = rotate.signum();
-                // if direction > 0 {
-                //     new.rotate_left(rotate.unsigned_abs());
-                //     new.insert(0, pair);
-                //     let new_index = (current_index + number as usize).rem_euclid(length);
-                //     new.insert(new_index + usize::from(number as usize >= length), pair);
-                // } else {
-                //     let new_index =
-                //         (current_index as isize - number).rem_euclid(length as isize) as usize;
-                //     new.insert(
-                //         new_index - usize::from((-number) as usize >= length - current_index),
-                //         pair,
-                //     );
-                // }
                 println!(
                     "list state after this step: {:?}\n",
                     new.iter()
@@ -1948,7 +1932,7 @@ fn day20(input: &str, part: Part) -> Solution {
         let position_zero = new
             .iter()
             .enumerate()
-            .find(|(index, (_, number))| *number == 0)
+            .find(|(_index, (_, number))| *number == 0)
             .unwrap()
             .0;
         let grove_coords_indices = [
