@@ -1881,12 +1881,99 @@ fn day14(input: &str, part: Part) -> Solution {
     }
 }
 
+fn day15(_input: &str, _part: Part) -> Solution {
+    Solution::String(String::from("not implemented"))
+}
+fn day16(_input: &str, _part: Part) -> Solution {
+    Solution::String(String::from("not implemented"))
+}
+fn day17(_input: &str, _part: Part) -> Solution {
+    Solution::String(String::from("not implemented"))
+}
+fn day18(_input: &str, _part: Part) -> Solution {
+    Solution::String(String::from("not implemented"))
+}
+fn day19(_input: &str, _part: Part) -> Solution {
+    Solution::String(String::from("not implemented"))
+}
+
+/// solves the problem for day 20
+fn day20(input: &str, part: Part) -> Solution {
+    fn part1(input: &str) -> isize {
+        let original: Vec<_> = input.lines().flat_map(str::parse::<isize>).collect();
+        println!("original: {:?}", original);
+        let mut new = original.iter().cloned().enumerate().collect::<Vec<_>>();
+        let length = original.len();
+        for (original_index, &number) in original.iter().enumerate() {
+            if number == 0 {
+                println!("0 does not move:");
+            } else {
+                println!("looking for {}'s current index", number);
+                let current_index = new
+                    .iter()
+                    .enumerate()
+                    .find(|(_current_index, (index, _number))| *index == original_index)
+                    .unwrap()
+                    .0;
+                println!("found {} at {}", number, current_index);
+                let pair = new.remove(current_index);
+                let effective_displacement = number % (length as isize - 1);
+                println!("effective displacement: {}", effective_displacement,);
+                let new_index =
+                    (current_index as isize + number).rem_euclid(length as isize - 1) as usize;
+                println!("destination index: {}", new_index);
+                new.insert(new_index, pair);
+                // let direction = rotate.signum();
+                // if direction > 0 {
+                //     new.rotate_left(rotate.unsigned_abs());
+                //     new.insert(0, pair);
+                //     let new_index = (current_index + number as usize).rem_euclid(length);
+                //     new.insert(new_index + usize::from(number as usize >= length), pair);
+                // } else {
+                //     let new_index =
+                //         (current_index as isize - number).rem_euclid(length as isize) as usize;
+                //     new.insert(
+                //         new_index - usize::from((-number) as usize >= length - current_index),
+                //         pair,
+                //     );
+                // }
+                println!(
+                    "list state after this step: {:?}\n",
+                    new.iter()
+                        .map(|(_original_index, number)| number)
+                        .collect::<Vec<_>>()
+                );
+            }
+        }
+        let position_zero = new
+            .iter()
+            .enumerate()
+            .find(|(index, (_, number))| *number == 0)
+            .unwrap()
+            .0;
+        let grove_coords_indices = [
+            (position_zero + 1_000).rem_euclid(length),
+            (position_zero + 2_000).rem_euclid(length),
+            (position_zero + 3_000).rem_euclid(length),
+        ];
+        grove_coords_indices.iter().map(|&index| new[index].1).sum()
+    }
+    fn part2(input: &str) -> usize {
+        0
+    }
+    match part {
+        Part::One => Solution::INumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
+    }
+}
+
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
     let days = [
         day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14,
+        day15, day16, day17, day18, day19, day20,
     ];
-    let today = 14;
+    let today = 20;
     let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
