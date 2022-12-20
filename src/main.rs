@@ -1881,8 +1881,69 @@ fn day14(input: &str, part: Part) -> Solution {
     }
 }
 
-fn day15(_input: &str, _part: Part) -> Solution {
-    Solution::String(String::from("not implemented"))
+fn day15(input: &str, part: Part) -> Solution {
+    type Position = (isize, isize);
+    fn parse_input_map(input: &str) -> (HashSet<Position>, Vec<(Position, Position)>) {
+        let re = Regex::new(r"^Sensor at x=(?P<sensor_x>-*\d+), y=(?P<sensor_y>-*\d+): closest beacon is at x=(?P<beacon_x>-*\d+), y=(?P<beacon_y>-*\d+)").unwrap();
+        input
+            .lines()
+            .flat_map(|line| re.captures(line))
+            .map(|captures| {
+                (
+                    (
+                        captures["sensor_x"].parse::<isize>().unwrap(),
+                        captures["sensor_y"].parse::<isize>().unwrap(),
+                    ),
+                    (
+                        captures["beacon_x"].parse::<isize>().unwrap(),
+                        captures["beacon_y"].parse::<isize>().unwrap(),
+                    ),
+                )
+            })
+            .fold(
+                (HashSet::new(), Vec::new()),
+                |(mut map, mut sensors), ((s_x, s_y), (b_x, b_y))| {
+                    map.insert((b_x, b_y));
+                    sensors.push(((s_x, s_y), (b_x, b_y)));
+                    (map, sensors)
+                },
+            )
+    }
+    fn part1(input: &str) -> usize {
+        const QUERIED_Y: isize = 2_000_000;
+        // const QUERIED_Y: isize = 10;
+        let (beacons, sensors) = parse_input_map(input);
+        let mut queried_line = HashSet::<isize>::new();
+        for ((sensor_x, sensor_y), (beacon_x, beacon_y)) in sensors.iter().cloned() {
+            let sensor_clear_radius =
+                (beacon_x.abs_diff(sensor_x) + beacon_y.abs_diff(sensor_y)) as isize;
+            let y_dist = QUERIED_Y.abs_diff(sensor_y) as isize;
+            match y_dist.cmp(&sensor_clear_radius) {
+                Ordering::Equal => {
+                    if !beacons.contains(&(sensor_x, QUERIED_Y)) {
+                        queried_line.insert(sensor_x);
+                    }
+                }
+                Ordering::Less => {
+                    let dx = sensor_clear_radius - y_dist;
+                    for x in (sensor_x - dx)..=(sensor_x + dx) {
+                        if !beacons.contains(&(x, QUERIED_Y)) {
+                            queried_line.insert(x);
+                        }
+                    }
+                }
+                Ordering::Greater => {}
+            }
+        }
+        queried_line.len()
+    }
+    fn part2(_input: &str) -> usize {
+        0
+    }
+    match part {
+        Part::One => Solution::UNumber(part1(input)),
+        Part::Two => Solution::UNumber(part2(input)),
+    }
 }
 fn day16(_input: &str, _part: Part) -> Solution {
     Solution::String(String::from("not implemented"))
@@ -1969,7 +2030,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14,
         day15, day16, day17, day18, day19, day20,
     ];
-    let today = 20;
+    let today = 15;
     let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
