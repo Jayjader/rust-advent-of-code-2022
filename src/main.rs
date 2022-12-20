@@ -1901,32 +1901,32 @@ fn day19(_input: &str, _part: Part) -> Solution {
 fn day20(input: &str, part: Part) -> Solution {
     fn part1(input: &str) -> isize {
         let original: Vec<_> = input.lines().flat_map(str::parse::<isize>).collect();
-        println!("original: {:?}", original);
+        // println!("original: {:?}", original);
         let mut new = original.iter().cloned().enumerate().collect::<Vec<_>>();
         let length = original.len();
         for (original_index, &number) in original.iter().enumerate() {
             if number == 0 {
-                println!("0 does not move:");
+                // println!("0 does not move:");
             } else {
-                println!("looking for {}'s current index", number);
+                // println!("looking for {}'s current index", number);
                 let current_index = new
                     .iter()
                     .enumerate()
                     .find(|(_current_index, (index, _number))| *index == original_index)
                     .unwrap()
                     .0;
-                println!("found {} at {}", number, current_index);
+                // println!("found {} at {}", number, current_index);
                 let pair = new.remove(current_index);
                 let new_index =
                     (current_index as isize + number).rem_euclid(length as isize - 1) as usize;
-                println!("destination index: {}", new_index);
+                // println!("destination index: {}", new_index);
                 new.insert(new_index, pair);
-                println!(
-                    "list state after this step: {:?}\n",
-                    new.iter()
-                        .map(|(_original_index, number)| number)
-                        .collect::<Vec<_>>()
-                );
+                // println!(
+                //     "list state after this step: {:?}\n",
+                //     new.iter()
+                //         .map(|(_original_index, number)| number)
+                //         .collect::<Vec<_>>()
+                // );
             }
         }
         let position_zero = new
@@ -1942,9 +1942,66 @@ fn day20(input: &str, part: Part) -> Solution {
         ];
         grove_coords_indices.iter().map(|&index| new[index].1).sum()
     }
-    fn part2(input: &str) -> usize {
-        0
+    fn mix(original: &Vec<i64>, current: Vec<(usize, i64)>) -> Vec<(usize, i64)> {
+        let mut new = current.to_vec();
+        let length = original.len();
+        for (original_index, &number) in original.iter().enumerate() {
+            if number == 0 {
+                // println!("0 does not move:");
+            } else {
+                // println!("looking for {}'s current index", number);
+                let current_index = new
+                    .iter()
+                    .enumerate()
+                    .find(|(_current_index, (index, _number))| *index == original_index)
+                    .unwrap()
+                    .0;
+                // println!("found {} at {}", number, current_index);
+                let pair = new.remove(current_index);
+                let new_index =
+                    (current_index as i64 + number).rem_euclid(length as i64 - 1) as usize;
+                // println!("destination index: {}", new_index);
+                new.insert(new_index, pair);
+                // println!(
+                //     "list state after this step: {:?}\n",
+                //     new.iter()
+                //         .map(|(_original_index, number)| number)
+                //         .collect::<Vec<_>>()
+                // );
+            }
+        }
+        new
     }
+    fn part2(input: &str) -> usize {
+        const DECRYPTION_KEY: i64 = 811589153;
+        let original: Vec<_> = input
+            .lines()
+            .flat_map(str::parse::<i64>)
+            .map(|n| n * DECRYPTION_KEY)
+            .collect();
+        // println!("original: {:?}", original);
+        let length = original.len();
+        let mut new = original.iter().cloned().enumerate().collect();
+        for _ in 0..10 {
+            new = mix(&original, new);
+        }
+        let position_zero = new
+            .iter()
+            .enumerate()
+            .find(|(_index, (_, number))| *number == 0)
+            .unwrap()
+            .0;
+        let grove_coords_indices = [
+            (position_zero + 1_000).rem_euclid(length),
+            (position_zero + 2_000).rem_euclid(length),
+            (position_zero + 3_000).rem_euclid(length),
+        ];
+        grove_coords_indices
+            .iter()
+            .map(|&index| new[index].1)
+            .sum::<i64>() as usize
+    }
+
     match part {
         Part::One => Solution::INumber(part1(input)),
         Part::Two => Solution::UNumber(part2(input)),
