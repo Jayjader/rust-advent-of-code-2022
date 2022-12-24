@@ -1937,8 +1937,180 @@ fn day15(input: &str, part: Part) -> Solution {
         }
         queried_line.len()
     }
-    fn part2(_input: &str) -> usize {
-        0
+    fn part2(input: &str) -> usize {
+        // (maybe) TODO: "just" paint a hash map with all the positions a beacon cannot be (restrict to min, max)
+        // then iterate over y in (min, max) until we find the y with a single x in (min, max) that can hold an undiscovered beacon
+
+        // todo: recurse for merging instead of attempting to cover every possible case in-iteration procedurally
+        // recursion can short-circuit itself (by nature of recursion) when [range start]  > [new_range end] + 1
+
+        // const MAX_X: usize = 4_000_000;
+        const MAX_X: usize = 20;
+        const MIN_X: usize = 0;
+        // const MAX_Y: usize = 4_000_000;
+        const MAX_Y: usize = 20;
+        const MIN_Y: usize = 0;
+        let (beacons, sensors) = parse_input_map(input);
+        let (mut x, mut y): (usize, usize) = (0, 0);
+        'y_querying: for queried_y in MIN_Y..=MAX_Y {
+            let mut queried_line = Vec::<std::ops::RangeInclusive<isize>>::new();
+            'sensors: for ((sensor_x, sensor_y), (beacon_x, beacon_y)) in sensors.iter().cloned() {
+                println!("{:?}", queried_line);
+                let sensor_clear_radius =
+                    (beacon_x.abs_diff(sensor_x) + beacon_y.abs_diff(sensor_y)) as isize;
+                let y_dist = (queried_y as isize).abs_diff(sensor_y) as isize;
+                match y_dist.cmp(&sensor_clear_radius) {
+                    Ordering::Equal => {
+                        if (MIN_X..=MAX_X).contains(&(sensor_x as usize))
+                            && !beacons.contains(&(sensor_x, queried_y as isize))
+                        {
+                            println!(
+                                "tangent! to sensor @ ({}, {}) with radius {}: ({}, {})",
+                                sensor_x, sensor_y, sensor_clear_radius, sensor_x, queried_y
+                            );
+                            if queried_line.is_empty() {
+                                queried_line.push(sensor_x..=sensor_x);
+                                continue 'sensors;
+                            }
+                            let mut i = 0;
+                            'update_stored_ranges: loop {
+                                let range = &queried_line[i];
+                                match (sensor_x + 1).cmp(range.start()) {
+                                    Ordering::Less => {
+                                        // too small to extend this range's start
+                                        // reaching this iteration means too large to extend previous range's end
+                                        // so isolated range of 1 centered on sensor_x is inserted
+                                        // insertion at "current_index" to preserve sort order
+                                        queried_line.insert(i, sensor_x..=sensor_x);
+                                        break 'update_stored_ranges;
+                                    }
+                                    Ordering::Equal => {
+                                        // extend the range start to 1 lower
+                                        queried_line[i] = (sensor_x)..=*range.end();
+                                        // we don't need to check the previous range, as we would have
+                                        // been merged into it during its check in the previous iteration
+                                        break 'update_stored_ranges;
+                                    }
+                                    Ordering::Greater => {}
+                                };
+                                if *range.end() == sensor_x - 1 {
+                                    // extend range end to 1 higher
+                                    if i + 1 < queried_line.len()
+                                        && queried_line[i + 1].start() == range.end()
+                                    {
+                                        // merge with following range
+                                        queried_line[i] = sensor_x..=*(queried_line[i + 1].end());
+                                        // prune the now-excess range from the vec
+                                        queried_line.remove(i + 1);
+                                    } else {
+                                        queried_line[i] = (*range.start() - 1)..=sensor_x;
+                                    }
+                                    break 'update_stored_ranges;
+                                }
+                                if i == queried_line.len() {
+                                    // insert at end to preserve total sort order (we are bigger than all existing range starts and ends by more than 1)
+                                    queried_line.push(sensor_x..=sensor_x);
+                                    break 'update_stored_ranges;
+                                }
+                                i += 1;
+                            }
+                        }
+                    }
+                    Ordering::Less => {
+                        // TODO: filter existing/known beacon coords
+                        let dx = sensor_clear_radius - y_dist;
+                        let n_s = sensor_x - dx; // new start
+                        let n_e = sensor_x + dx; // new end
+                        println!(
+                            "2 points! to sensor @ ({}, {}) with radius {}; ({}, {}) and ({}, {})",
+                            sensor_x, sensor_y, sensor_clear_radius, n_s, queried_y, n_e, queried_y
+                        );
+                        if queried_line.is_empty() {
+                            queried_line.push(n_s..=n_e);
+                            continue 'sensors;
+                        }
+                        let mut i = 0;
+                        'update_range: loop {
+                            let range = &queried_line[i];
+                            let (r_s, r_e) = (*range.start(), *range.end());
+
+                            if (r_s <= n_s) && (n_s <= r_e) && (r_e <= n_e) {
+                                // overlaps the end of existing range
+                                println!("overlap end {}", i);
+                                queried_line[i] = r_s..=n_e;
+                                break 'update_range;
+                            } else if (n_s <= r_s) && (r_s <= n_e) && (n_e <= r_e) {
+                                // overlaps the start of existing range
+                                queried_line[i] = n_s..=r_e;
+                                break 'update_range;
+                            } else if (n_s <= r_s) && (r_e <= n_e) {
+                                // overlaps both start and end of existing range
+                                queried_line[i] = n_s..=n_e;
+                                break 'update_range;
+                            } else if (r_s <= n_s) && (n_e <= r_e) {
+                                // existing range overlaps both start and end of new range
+                                break 'update_range;
+                            } else if n_e < r_s {
+                                // new range is entirely smaller than existing range
+                                // we know it does not merge with previous (we would have done that during previous iteration and broke from the loop)
+                                // so entire isolated range is inserted
+                                // insertion at "current" index preserves total vec sort order
+                                queried_line.insert(i, n_s..=n_e);
+                                break 'update_range;
+                            } else if r_e < n_s {
+                                // new range is entirely greater than existing range
+                                if r_e + 1 == n_s {
+                                    // start of new range would be adjacent to end of existing range
+                                    if i + 1 < queried_line.len()
+                                        && n_e + 1 >= *queried_line[i + 1].start()
+                                    {
+                                        // end of new range would overlap or be adjacent with following range start as well
+                                        // so we merge following range into existing range instead
+                                        queried_line[i] = r_s..=*queried_line[i + 1].end();
+                                        // then prune the excess range from the vec
+                                        queried_line.remove(i + 1);
+                                    } else {
+                                        // merge with existing range
+                                        queried_line[i] = r_s..=n_e;
+                                    }
+                                    break 'update_range;
+                                }
+                            }
+                            if dbg!(i == queried_line.len()) {
+                                // end reached
+                                // insert at end to preserve total sort order
+                                queried_line.push(n_s..=n_e);
+                                break 'update_range;
+                            }
+                            i += 1;
+                        }
+                    }
+                    Ordering::Greater => {}
+                }
+            }
+            let impossible_positions = queried_line
+                .iter()
+                .map(|range| (*range.end() - *range.start() + 1) as usize)
+                .sum::<usize>();
+            println!("{}: {:?}", queried_y, queried_line);
+            if impossible_positions == ((MAX_X - MIN_X + 1) - 1) {
+                y = queried_y;
+                x = (MIN_X..=MAX_X)
+                    .find_map(|x_| {
+                        queried_line.iter().find_map(|range| {
+                            if range.contains(&(x_ as isize)) {
+                                None
+                            } else {
+                                Some(x_)
+                            }
+                        })
+                    })
+                    .unwrap();
+                println!("found beacon positino: ({}, {})", x, y);
+                break 'y_querying;
+            }
+        }
+        4_000_000usize * x + y
     }
     match part {
         Part::One => Solution::UNumber(part1(input)),
@@ -2031,7 +2203,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         day15, day16, day17, day18, day19, day20,
     ];
     let today = 15;
-    let prod_or_test = "prod";
+    let prod_or_test = "test";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
