@@ -7,6 +7,7 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io::Write;
 use std::iter::Map;
+use std::ops::Rem;
 use std::str::{FromStr, Split};
 use std::{env, fs};
 
@@ -44,6 +45,7 @@ impl Error for PartParseError {}
 #[derive(Debug)]
 enum Solution {
     UNumber(usize),
+    U64(u64),
     INumber(isize),
     String(String),
 }
@@ -51,6 +53,9 @@ impl Display for Solution {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Solution::UNumber(n) => {
+                write!(f, "{}", n)
+            }
+            Solution::U64(n) => {
                 write!(f, "{}", n)
             }
             Solution::INumber(n) => {
@@ -1881,6 +1886,7 @@ fn day14(input: &str, part: Part) -> Solution {
     }
 }
 
+/// solves the problem for day 15
 fn day15(input: &str, part: Part) -> Solution {
     type Position = (isize, isize);
     fn parse_input_map(input: &str) -> (HashSet<Position>, Vec<(Position, Position)>) {
@@ -1937,186 +1943,386 @@ fn day15(input: &str, part: Part) -> Solution {
         }
         queried_line.len()
     }
-    fn part2(input: &str) -> usize {
+    fn part2(input: &str) -> u64 {
         // (maybe) TODO: "just" paint a hash map with all the positions a beacon cannot be (restrict to min, max)
         // then iterate over y in (min, max) until we find the y with a single x in (min, max) that can hold an undiscovered beacon
 
         // todo: recurse for merging instead of attempting to cover every possible case in-iteration procedurally
         // recursion can short-circuit itself (by nature of recursion) when [range start]  > [new_range end] + 1
+        fn insert_point(
+            mut vec: VecDeque<std::ops::RangeInclusive<isize>>,
+            point: isize,
+        ) -> VecDeque<std::ops::RangeInclusive<isize>> {
+            if vec.is_empty() {
+                vec.push_front(point..=point);
+                return vec;
+            }
+            {
+                let existing_range = vec.front().unwrap();
+                if point + 1 < *existing_range.start() {
+                    vec.push_front(point..=point);
+                    vec
+                } else if point + 1 == *existing_range.start() {
+                    let front = vec.pop_front().unwrap();
+                    vec.push_front(point..=*front.end());
+                    vec
+                } else if point >= *existing_range.start() && point <= *existing_range.end() {
+                    // noop, point is already inside range
+                    vec
+                } else if point - 1 == *existing_range.end() {
+                    let front = vec.pop_front().unwrap();
+                    if let Some(following) = vec.front() {
+                        if *following.start() == point + 1 {
+                            // point is the exact value needed to merge the 2 adjacent ranges
+                            let following = vec.pop_front().unwrap();
+                            vec.push_front(*front.start()..=*following.end());
+                            vec
+                        } else {
+                            vec.push_front(*front.start()..=point);
+                            vec
+                        }
+                    } else {
+                        vec.push_front(*front.start()..=point);
+                        vec
+                    }
+                } else {
+                    // effectively, return [head, rec_call(tail, point)]
+                    let front = vec.pop_front().unwrap();
+                    let mut recursive_call = insert_point(vec, point);
+                    recursive_call.push_front(front);
+                    recursive_call
+                    //
+                }
+            }
+        }
+        /*
+        // p ...a-1  a ... b
+        assert_eq!(
+            insert_point(VecDeque::from([2..=4]), -3),
+            VecDeque::from([-3..=-3, 2..=4])
+        );
+        // ...p a ... b
+        assert_eq!(
+            insert_point(VecDeque::from([-3..=3]), -4),
+            VecDeque::from([-4..=3])
+        );
+        // ...a ... b ...
+        //    p
+        assert_eq!(
+            insert_point(VecDeque::from([10..=12]), 10),
+            VecDeque::from([10..=12])
+        );
+        // ...a p b ...
+        assert_eq!(
+            insert_point(VecDeque::from([10..=12]), 11),
+            VecDeque::from([10..=12])
+        );
+        // ...a ... b ...
+        //          p
+        assert_eq!(
+            insert_point(VecDeque::from([10..=12]), 12),
+            VecDeque::from([10..=12])
+        );
+        // ...a b p ...
+        assert_eq!(
+            insert_point(VecDeque::from([-6..=-4]), -3),
+            VecDeque::from([-6..=-3])
+        );
+        // ...a ... b b+1 ... p
+        assert_eq!(
+            insert_point(VecDeque::from([-8..=14]), 16),
+            VecDeque::from([-8..=14, 16..=16])
+        );
 
-        // const MAX_X: usize = 4_000_000;
-        const MAX_X: usize = 20;
-        const MIN_X: usize = 0;
-        // const MAX_Y: usize = 4_000_000;
-        const MAX_Y: usize = 20;
-        const MIN_Y: usize = 0;
+        // ...a ... b p c ... d
+        assert_eq!(
+            insert_point(VecDeque::from([-2..=-1, 1..=9]), 0),
+            VecDeque::from([-2..=9])
+        );
+        // ...a ... b p c ... d
+        assert_eq!(
+            insert_point(VecDeque::from([-2..=-1, 1..=9]), 0),
+            VecDeque::from([-2..=9])
+        );
+        */
+        fn insert_range(
+            mut vec: VecDeque<std::ops::RangeInclusive<isize>>,
+            new_range: std::ops::RangeInclusive<isize>,
+        ) -> VecDeque<std::ops::RangeInclusive<isize>> {
+            if vec.is_empty() {
+                vec.push_front(new_range);
+                vec
+            } else {
+                let current_range = vec.front().unwrap();
+                if *new_range.end() < (*current_range.start() - 1) {
+                    // println!("before=>insert");
+                    vec.push_front(new_range);
+                    vec
+                } else if *new_range.end() == (*current_range.start() - 1) {
+                    // println!("end adjacent to next start=>grow next");
+                    // vec[0] = new.start..=current.end;
+                    let front = vec.pop_front().unwrap();
+                    let new_start = *new_range.start();
+                    let new_end = *front.end();
+                    let new_front = new_start..=new_end;
+                    // vec.push_front(new_front);
+                    insert_range(vec, new_front)
+                } else if (*new_range.start() <= *current_range.start())
+                    && (*new_range.end() >= *current_range.start())
+                    && (*new_range.end() <= *current_range.end())
+                {
+                    // println!("end inside next=>grow next");
+                    // vec[0] = new.start..=current.end;
+                    let front = vec.pop_front().unwrap();
+                    let new_start = *new_range.start();
+                    let new_end = *front.end();
+                    let new_front = new_start..=new_end;
+                    // vec.push_front(new_start..=new_end);
+                    insert_range(vec, new_front)
+                } else if (*new_range.start() <= *current_range.start())
+                    && (*new_range.end() >= *current_range.end())
+                {
+                    // println!("end after next=>replace next");
+                    // vec[0] = new_range;
+                    vec.pop_front();
+                    insert_range(vec, new_range)
+                } else if (*new_range.start() >= *current_range.start())
+                    && (*new_range.start() <= *current_range.end())
+                    && (*new_range.end() >= *current_range.end())
+                {
+                    // println!("start inside next=>grow next");
+                    // vec[0] == current.start..=new.end;
+                    let front = vec.pop_front().unwrap();
+                    let new_start = *front.start();
+                    let new_end = *new_range.end();
+                    let new_front = new_start..=new_end;
+                    // vec.push_front(new_front);
+                    insert_range(vec, new_front)
+                } else if *new_range.start() == (*current_range.end() + 1) {
+                    // println!("start adjacent to next end=>grow next");
+                    // vec[0] == current.start..=new.end;
+                    let front = vec.pop_front().unwrap();
+                    let new_start = *front.start();
+                    let new_end = *new_range.end();
+                    // vec.push_front(new_front);
+                    let new_front = new_start..=new_end;
+                    insert_range(vec, new_front)
+                } else if *new_range.start() > (*current_range.end() + 1) {
+                    // println!("after=>recurse on tail");
+                    // effectively, return [head, rec_call(tail, range)]
+                    let front = vec.pop_front().unwrap();
+                    let mut recursive_call = insert_range(vec, new_range);
+                    recursive_call.push_front(front);
+                    recursive_call
+                } else if (*new_range.start() >= *current_range.start())
+                    && (*new_range.end() <= *current_range.end())
+                {
+                    // println!("inside=>leave as-is");
+                    vec
+                } else {
+                    // insert clearly invalid sentinel to debug errors
+                    vec.push_back(0..=0);
+                    vec.push_back(new_range);
+                    vec
+                }
+            }
+        }
+        /*
+        // ...x..y..a..b...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=2]), -5..=-3),
+            VecDeque::from([-5..=-3, 1..=2])
+        );
+        // ...x...y,a...b...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=2]), -5..=0),
+            VecDeque::from([-5..=2])
+        );
+        // .........a..b...
+        // ...x.....y.......
+        assert_eq!(
+            insert_range(VecDeque::from([1..=2]), -5..=1),
+            VecDeque::from([-5..=2])
+        );
+        // ...x..a..y..b...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), -5..=2),
+            VecDeque::from([-5..=4])
+        );
+        // .........a..b...
+        // ...x........y....
+        assert_eq!(
+            insert_range(VecDeque::from([1..=2]), -5..=2),
+            VecDeque::from([-5..=2])
+        );
+        // ...x..a..b,y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), -5..=5),
+            VecDeque::from([-5..=5])
+        );
+        // ...x..a..b..y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), -5..=6),
+            VecDeque::from([-5..=6])
+        );
+        // ...x,a..b..y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), 0..=6),
+            VecDeque::from([0..=6])
+        );
+        // .....a..b...
+        // .....x....y..
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), 1..=6),
+            VecDeque::from([1..=6])
+        );
+        // ...a,x..b..y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), 2..=6),
+            VecDeque::from([1..=6])
+        );
+        // ...a..x..b..y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=5]), 3..=6),
+            VecDeque::from([1..=6])
+        );
+        // ...a..x,b..y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), 3..=6),
+            VecDeque::from([1..=6])
+        );
+        // .....a..b...
+        // ........x.y..
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), 4..=6),
+            VecDeque::from([1..=6])
+        );
+        // ...a..b,x..y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), 5..=6),
+            VecDeque::from([1..=6])
+        );
+        // ...a..b..x..y...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=4]), 6..=8),
+            VecDeque::from([1..=4, 6..=8])
+        );
+        // ...a..x..y..b...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=6]), 3..=4),
+            VecDeque::from([1..=6])
+        );
+        // ...a..x..b..c..y..d...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=6, 8..=11]), 3..=9),
+            VecDeque::from([1..=11])
+        );
+        // ...a..b,x,c..y..d...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=6, 8..=11]), 7..=9),
+            VecDeque::from([1..=11])
+        );
+        // ...a..x..b,y,c..d...
+        assert_eq!(
+            insert_range(VecDeque::from([1..=6, 8..=11]), 3..=7),
+            VecDeque::from([1..=11])
+        );
+         */
+
+        fn exclude_point(
+            mut deque: VecDeque<std::ops::RangeInclusive<isize>>,
+            point: isize,
+        ) -> VecDeque<std::ops::RangeInclusive<isize>> {
+            if deque.is_empty() {
+                deque
+            } else {
+                let front = deque.front().unwrap();
+                if point >= *front.start() {
+                    if point > *front.end() {
+                        let front = deque.pop_front().unwrap();
+                        let mut deque = exclude_point(deque, point);
+                        deque.push_front(front);
+                        deque
+                    } else {
+                        let front = deque.pop_front().unwrap();
+                        let new_front = *front.start()..=(point - 1);
+                        let new_next = (point + 1)..=(*front.end());
+                        deque.push_front(new_next);
+                        deque.push_front(new_front);
+                        deque
+                    }
+                } else {
+                    deque.push_back(0..=0);
+                    deque.push_back(point..=point);
+                    deque
+                }
+            }
+        }
+        assert_eq!(
+            exclude_point(VecDeque::from([1..=10]), 8),
+            VecDeque::from([1..=7, 9..=10])
+        );
+        const MAX_X: isize = 4_000_000;
+        // const MAX_X: isize = 20;
+        const MIN_X: isize = 0;
+        const MAX_Y: isize = 4_000_000;
+        // const MAX_Y: isize = 20;
+        const MIN_Y: isize = 0;
         let (beacons, sensors) = parse_input_map(input);
-        let (mut x, mut y): (usize, usize) = (0, 0);
+        let (mut x, mut y): (u64, u64) = (0, 0);
         'y_querying: for queried_y in MIN_Y..=MAX_Y {
-            let mut queried_line = Vec::<std::ops::RangeInclusive<isize>>::new();
-            'sensors: for ((sensor_x, sensor_y), (beacon_x, beacon_y)) in sensors.iter().cloned() {
-                println!("{:?}", queried_line);
+            if queried_y.rem(250_000) == 0 {
+                println!("querying y == {}", queried_y);
+            }
+            let mut queried_line = VecDeque::<std::ops::RangeInclusive<isize>>::new();
+            for ((sensor_x, sensor_y), (beacon_x, beacon_y)) in sensors.iter().cloned() {
                 let sensor_clear_radius =
                     (beacon_x.abs_diff(sensor_x) + beacon_y.abs_diff(sensor_y)) as isize;
-                let y_dist = (queried_y as isize).abs_diff(sensor_y) as isize;
+                let y_dist = queried_y.abs_diff(sensor_y) as isize;
                 match y_dist.cmp(&sensor_clear_radius) {
                     Ordering::Equal => {
-                        if (MIN_X..=MAX_X).contains(&(sensor_x as usize))
-                            && !beacons.contains(&(sensor_x, queried_y as isize))
+                        if (MIN_X..=MAX_X).contains(&sensor_x)
+                            && !beacons.contains(&(sensor_x, queried_y))
                         {
-                            println!(
-                                "tangent! to sensor @ ({}, {}) with radius {}: ({}, {})",
-                                sensor_x, sensor_y, sensor_clear_radius, sensor_x, queried_y
-                            );
-                            if queried_line.is_empty() {
-                                queried_line.push(sensor_x..=sensor_x);
-                                continue 'sensors;
-                            }
-                            let mut i = 0;
-                            'update_stored_ranges: loop {
-                                let range = &queried_line[i];
-                                match (sensor_x + 1).cmp(range.start()) {
-                                    Ordering::Less => {
-                                        // too small to extend this range's start
-                                        // reaching this iteration means too large to extend previous range's end
-                                        // so isolated range of 1 centered on sensor_x is inserted
-                                        // insertion at "current_index" to preserve sort order
-                                        queried_line.insert(i, sensor_x..=sensor_x);
-                                        break 'update_stored_ranges;
-                                    }
-                                    Ordering::Equal => {
-                                        // extend the range start to 1 lower
-                                        queried_line[i] = (sensor_x)..=*range.end();
-                                        // we don't need to check the previous range, as we would have
-                                        // been merged into it during its check in the previous iteration
-                                        break 'update_stored_ranges;
-                                    }
-                                    Ordering::Greater => {}
-                                };
-                                if *range.end() == sensor_x - 1 {
-                                    // extend range end to 1 higher
-                                    if i + 1 < queried_line.len()
-                                        && queried_line[i + 1].start() == range.end()
-                                    {
-                                        // merge with following range
-                                        queried_line[i] = sensor_x..=*(queried_line[i + 1].end());
-                                        // prune the now-excess range from the vec
-                                        queried_line.remove(i + 1);
-                                    } else {
-                                        queried_line[i] = (*range.start() - 1)..=sensor_x;
-                                    }
-                                    break 'update_stored_ranges;
-                                }
-                                if i == queried_line.len() {
-                                    // insert at end to preserve total sort order (we are bigger than all existing range starts and ends by more than 1)
-                                    queried_line.push(sensor_x..=sensor_x);
-                                    break 'update_stored_ranges;
-                                }
-                                i += 1;
-                            }
+                            queried_line = insert_point(queried_line, sensor_x);
                         }
                     }
                     Ordering::Less => {
-                        // TODO: filter existing/known beacon coords
                         let dx = sensor_clear_radius - y_dist;
-                        let n_s = sensor_x - dx; // new start
-                        let n_e = sensor_x + dx; // new end
-                        println!(
-                            "2 points! to sensor @ ({}, {}) with radius {}; ({}, {}) and ({}, {})",
-                            sensor_x, sensor_y, sensor_clear_radius, n_s, queried_y, n_e, queried_y
-                        );
-                        if queried_line.is_empty() {
-                            queried_line.push(n_s..=n_e);
-                            continue 'sensors;
-                        }
-                        let mut i = 0;
-                        'update_range: loop {
-                            let range = &queried_line[i];
-                            let (r_s, r_e) = (*range.start(), *range.end());
-
-                            if (r_s <= n_s) && (n_s <= r_e) && (r_e <= n_e) {
-                                // overlaps the end of existing range
-                                println!("overlap end {}", i);
-                                queried_line[i] = r_s..=n_e;
-                                break 'update_range;
-                            } else if (n_s <= r_s) && (r_s <= n_e) && (n_e <= r_e) {
-                                // overlaps the start of existing range
-                                queried_line[i] = n_s..=r_e;
-                                break 'update_range;
-                            } else if (n_s <= r_s) && (r_e <= n_e) {
-                                // overlaps both start and end of existing range
-                                queried_line[i] = n_s..=n_e;
-                                break 'update_range;
-                            } else if (r_s <= n_s) && (n_e <= r_e) {
-                                // existing range overlaps both start and end of new range
-                                break 'update_range;
-                            } else if n_e < r_s {
-                                // new range is entirely smaller than existing range
-                                // we know it does not merge with previous (we would have done that during previous iteration and broke from the loop)
-                                // so entire isolated range is inserted
-                                // insertion at "current" index preserves total vec sort order
-                                queried_line.insert(i, n_s..=n_e);
-                                break 'update_range;
-                            } else if r_e < n_s {
-                                // new range is entirely greater than existing range
-                                if r_e + 1 == n_s {
-                                    // start of new range would be adjacent to end of existing range
-                                    if i + 1 < queried_line.len()
-                                        && n_e + 1 >= *queried_line[i + 1].start()
-                                    {
-                                        // end of new range would overlap or be adjacent with following range start as well
-                                        // so we merge following range into existing range instead
-                                        queried_line[i] = r_s..=*queried_line[i + 1].end();
-                                        // then prune the excess range from the vec
-                                        queried_line.remove(i + 1);
-                                    } else {
-                                        // merge with existing range
-                                        queried_line[i] = r_s..=n_e;
-                                    }
-                                    break 'update_range;
-                                }
-                            }
-                            if dbg!(i == queried_line.len()) {
-                                // end reached
-                                // insert at end to preserve total sort order
-                                queried_line.push(n_s..=n_e);
-                                break 'update_range;
-                            }
-                            i += 1;
+                        let new_start = sensor_x - dx;
+                        let new_end = sensor_x + dx;
+                        if (MIN_X..=MAX_X).contains(&new_start)
+                            || (MIN_X..=MAX_X).contains(&new_end)
+                        {
+                            let new_start = new_start.clamp(MIN_X, MAX_X);
+                            let new_end = new_end.clamp(MIN_X, MAX_X);
+                            queried_line = insert_range(queried_line, new_start..=new_end);
                         }
                     }
                     Ordering::Greater => {}
                 }
             }
-            let impossible_positions = queried_line
+            let number_of_impossible_positions = queried_line
                 .iter()
                 .map(|range| (*range.end() - *range.start() + 1) as usize)
                 .sum::<usize>();
-            println!("{}: {:?}", queried_y, queried_line);
-            if impossible_positions == ((MAX_X - MIN_X + 1) - 1) {
-                y = queried_y;
+            if number_of_impossible_positions == ((MAX_X - MIN_X + 1) - 1) as usize {
+                y = queried_y as u64;
                 x = (MIN_X..=MAX_X)
-                    .find_map(|x_| {
-                        queried_line.iter().find_map(|range| {
-                            if range.contains(&(x_ as isize)) {
-                                None
-                            } else {
-                                Some(x_)
-                            }
-                        })
-                    })
-                    .unwrap();
-                println!("found beacon positino: ({}, {})", x, y);
+                    .find(|x_| queried_line.iter().all(|range| !range.contains(x_)))
+                    .unwrap() as u64;
+                println!("found beacon position: ({}, {})", x, y);
                 break 'y_querying;
             }
         }
-        4_000_000usize * x + y
+        4_000_000u64 * x + y
     }
     match part {
         Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::Two => Solution::U64(part2(input)),
     }
 }
+
 fn day16(_input: &str, _part: Part) -> Solution {
     Solution::String(String::from("not implemented"))
 }
@@ -2203,7 +2409,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         day15, day16, day17, day18, day19, day20,
     ];
     let today = 15;
-    let prod_or_test = "test";
+    let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
