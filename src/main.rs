@@ -2055,60 +2055,30 @@ fn day15(input: &str, part: Part) -> Solution {
             } else {
                 let current_range = vec.front().unwrap();
                 if *new_range.end() < (*current_range.start() - 1) {
-                    // println!("before=>insert");
                     vec.push_front(new_range);
                     vec
-                } else if *new_range.end() == (*current_range.start() - 1) {
-                    // println!("end adjacent to next start=>grow next");
-                    // vec[0] = new.start..=current.end;
-                    let front = vec.pop_front().unwrap();
-                    let new_start = *new_range.start();
-                    let new_end = *front.end();
-                    let new_front = new_start..=new_end;
-                    // vec.push_front(new_front);
-                    insert_range(vec, new_front)
-                } else if (*new_range.start() <= *current_range.start())
-                    && (*new_range.end() >= *current_range.start())
-                    && (*new_range.end() <= *current_range.end())
+                } else if *new_range.end() == (*current_range.start() - 1)
+                    || (*new_range.start() <= *current_range.start())
+                        && (*new_range.end() >= *current_range.start())
+                        && (*new_range.end() <= *current_range.end())
                 {
-                    // println!("end inside next=>grow next");
-                    // vec[0] = new.start..=current.end;
                     let front = vec.pop_front().unwrap();
-                    let new_start = *new_range.start();
-                    let new_end = *front.end();
-                    let new_front = new_start..=new_end;
-                    // vec.push_front(new_start..=new_end);
+                    let new_front = *new_range.start()..=*front.end();
                     insert_range(vec, new_front)
                 } else if (*new_range.start() <= *current_range.start())
                     && (*new_range.end() >= *current_range.end())
                 {
-                    // println!("end after next=>replace next");
-                    // vec[0] = new_range;
                     vec.pop_front();
                     insert_range(vec, new_range)
                 } else if (*new_range.start() >= *current_range.start())
                     && (*new_range.start() <= *current_range.end())
                     && (*new_range.end() >= *current_range.end())
+                    || *new_range.start() == (*current_range.end() + 1)
                 {
-                    // println!("start inside next=>grow next");
-                    // vec[0] == current.start..=new.end;
                     let front = vec.pop_front().unwrap();
-                    let new_start = *front.start();
-                    let new_end = *new_range.end();
-                    let new_front = new_start..=new_end;
-                    // vec.push_front(new_front);
-                    insert_range(vec, new_front)
-                } else if *new_range.start() == (*current_range.end() + 1) {
-                    // println!("start adjacent to next end=>grow next");
-                    // vec[0] == current.start..=new.end;
-                    let front = vec.pop_front().unwrap();
-                    let new_start = *front.start();
-                    let new_end = *new_range.end();
-                    // vec.push_front(new_front);
-                    let new_front = new_start..=new_end;
+                    let new_front = *front.start()..=*new_range.end();
                     insert_range(vec, new_front)
                 } else if *new_range.start() > (*current_range.end() + 1) {
-                    // println!("after=>recurse on tail");
                     // effectively, return [head, rec_call(tail, range)]
                     let front = vec.pop_front().unwrap();
                     let mut recursive_call = insert_range(vec, new_range);
@@ -2117,10 +2087,9 @@ fn day15(input: &str, part: Part) -> Solution {
                 } else if (*new_range.start() >= *current_range.start())
                     && (*new_range.end() <= *current_range.end())
                 {
-                    // println!("inside=>leave as-is");
                     vec
                 } else {
-                    // insert clearly invalid sentinel to debug errors
+                    // insert clearly invalid sentinel to debug errors // unimplemented cases
                     vec.push_back(0..=0);
                     vec.push_back(new_range);
                     vec
