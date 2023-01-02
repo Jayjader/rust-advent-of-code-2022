@@ -1,5 +1,8 @@
 extern crate core;
+extern crate regex;
 
+use core::convert::TryFrom;
+use core::convert::TryInto;
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::error::Error;
@@ -1944,11 +1947,6 @@ fn day15(input: &str, part: Part) -> Solution {
         queried_line.len()
     }
     fn part2(input: &str) -> u64 {
-        // (maybe) TODO: "just" paint a hash map with all the positions a beacon cannot be (restrict to min, max)
-        // then iterate over y in (min, max) until we find the y with a single x in (min, max) that can hold an undiscovered beacon
-
-        // todo: recurse for merging instead of attempting to cover every possible case in-iteration procedurally
-        // recursion can short-circuit itself (by nature of recursion) when [range start]  > [new_range end] + 1
         fn insert_point(
             mut vec: VecDeque<std::ops::RangeInclusive<isize>>,
             point: isize,
@@ -1995,56 +1993,7 @@ fn day15(input: &str, part: Part) -> Solution {
                 }
             }
         }
-        /*
-        // p ...a-1  a ... b
-        assert_eq!(
-            insert_point(VecDeque::from([2..=4]), -3),
-            VecDeque::from([-3..=-3, 2..=4])
-        );
-        // ...p a ... b
-        assert_eq!(
-            insert_point(VecDeque::from([-3..=3]), -4),
-            VecDeque::from([-4..=3])
-        );
-        // ...a ... b ...
-        //    p
-        assert_eq!(
-            insert_point(VecDeque::from([10..=12]), 10),
-            VecDeque::from([10..=12])
-        );
-        // ...a p b ...
-        assert_eq!(
-            insert_point(VecDeque::from([10..=12]), 11),
-            VecDeque::from([10..=12])
-        );
-        // ...a ... b ...
-        //          p
-        assert_eq!(
-            insert_point(VecDeque::from([10..=12]), 12),
-            VecDeque::from([10..=12])
-        );
-        // ...a b p ...
-        assert_eq!(
-            insert_point(VecDeque::from([-6..=-4]), -3),
-            VecDeque::from([-6..=-3])
-        );
-        // ...a ... b b+1 ... p
-        assert_eq!(
-            insert_point(VecDeque::from([-8..=14]), 16),
-            VecDeque::from([-8..=14, 16..=16])
-        );
 
-        // ...a ... b p c ... d
-        assert_eq!(
-            insert_point(VecDeque::from([-2..=-1, 1..=9]), 0),
-            VecDeque::from([-2..=9])
-        );
-        // ...a ... b p c ... d
-        assert_eq!(
-            insert_point(VecDeque::from([-2..=-1, 1..=9]), 0),
-            VecDeque::from([-2..=9])
-        );
-        */
         fn insert_range(
             mut vec: VecDeque<std::ops::RangeInclusive<isize>>,
             new_range: std::ops::RangeInclusive<isize>,
@@ -2096,107 +2045,6 @@ fn day15(input: &str, part: Part) -> Solution {
                 }
             }
         }
-        /*
-        // ...x..y..a..b...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=2]), -5..=-3),
-            VecDeque::from([-5..=-3, 1..=2])
-        );
-        // ...x...y,a...b...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=2]), -5..=0),
-            VecDeque::from([-5..=2])
-        );
-        // .........a..b...
-        // ...x.....y.......
-        assert_eq!(
-            insert_range(VecDeque::from([1..=2]), -5..=1),
-            VecDeque::from([-5..=2])
-        );
-        // ...x..a..y..b...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), -5..=2),
-            VecDeque::from([-5..=4])
-        );
-        // .........a..b...
-        // ...x........y....
-        assert_eq!(
-            insert_range(VecDeque::from([1..=2]), -5..=2),
-            VecDeque::from([-5..=2])
-        );
-        // ...x..a..b,y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), -5..=5),
-            VecDeque::from([-5..=5])
-        );
-        // ...x..a..b..y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), -5..=6),
-            VecDeque::from([-5..=6])
-        );
-        // ...x,a..b..y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), 0..=6),
-            VecDeque::from([0..=6])
-        );
-        // .....a..b...
-        // .....x....y..
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), 1..=6),
-            VecDeque::from([1..=6])
-        );
-        // ...a,x..b..y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), 2..=6),
-            VecDeque::from([1..=6])
-        );
-        // ...a..x..b..y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=5]), 3..=6),
-            VecDeque::from([1..=6])
-        );
-        // ...a..x,b..y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), 3..=6),
-            VecDeque::from([1..=6])
-        );
-        // .....a..b...
-        // ........x.y..
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), 4..=6),
-            VecDeque::from([1..=6])
-        );
-        // ...a..b,x..y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), 5..=6),
-            VecDeque::from([1..=6])
-        );
-        // ...a..b..x..y...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=4]), 6..=8),
-            VecDeque::from([1..=4, 6..=8])
-        );
-        // ...a..x..y..b...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=6]), 3..=4),
-            VecDeque::from([1..=6])
-        );
-        // ...a..x..b..c..y..d...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=6, 8..=11]), 3..=9),
-            VecDeque::from([1..=11])
-        );
-        // ...a..b,x,c..y..d...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=6, 8..=11]), 7..=9),
-            VecDeque::from([1..=11])
-        );
-        // ...a..x..b,y,c..d...
-        assert_eq!(
-            insert_range(VecDeque::from([1..=6, 8..=11]), 3..=7),
-            VecDeque::from([1..=11])
-        );
-         */
 
         fn exclude_point(
             mut deque: VecDeque<std::ops::RangeInclusive<isize>>,
