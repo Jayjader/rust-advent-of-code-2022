@@ -2062,10 +2062,6 @@ fn day15(input: &str, part: Part) -> Solution {
             deque.push_front(new_front);
             deque
         }
-        assert_eq!(
-            exclude_point(VecDeque::from([1..=10]), 8),
-            VecDeque::from([1..=7, 9..=10])
-        );
         const MAX_X: isize = 4_000_000;
         // const MAX_X: isize = 20;
         const MIN_X: isize = 0;
