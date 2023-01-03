@@ -1955,95 +1955,90 @@ fn day15(input: &str, part: Part) -> Solution {
                 vec.push_front(point..=point);
                 return vec;
             }
-            {
-                let existing_range = vec.front().unwrap();
-                if point + 1 < *existing_range.start() {
-                    vec.push_front(point..=point);
-                    vec
-                } else if point + 1 == *existing_range.start() {
-                    let front = vec.pop_front().unwrap();
-                    vec.push_front(point..=*front.end());
-                    vec
-                } else if point >= *existing_range.start() && point <= *existing_range.end() {
-                    // noop, point is already inside range
-                    vec
-                } else if point - 1 == *existing_range.end() {
-                    let front = vec.pop_front().unwrap();
-                    if let Some(following) = vec.front() {
-                        if *following.start() == point + 1 {
-                            // point is the exact value needed to merge the 2 adjacent ranges
-                            let following = vec.pop_front().unwrap();
-                            vec.push_front(*front.start()..=*following.end());
-                            vec
-                        } else {
-                            vec.push_front(*front.start()..=point);
-                            vec
-                        }
-                    } else {
-                        vec.push_front(*front.start()..=point);
-                        vec
-                    }
-                } else {
-                    // effectively, return [head, rec_call(tail, point)]
-                    let front = vec.pop_front().unwrap();
-                    let mut recursive_call = insert_point(vec, point);
-                    recursive_call.push_front(front);
-                    recursive_call
-                    //
-                }
+            let existing_range = vec.front().unwrap();
+            if point + 1 < *existing_range.start() {
+                vec.push_front(point..=point);
+                return vec;
             }
+            if point + 1 == *existing_range.start() {
+                let front = vec.pop_front().unwrap();
+                vec.push_front(point..=*front.end());
+                return vec;
+            }
+            if point >= *existing_range.start() && point <= *existing_range.end() {
+                // noop, point is already inside range
+                return vec;
+            }
+            if point - 1 == *existing_range.end() {
+                let front = vec.pop_front().unwrap();
+                if let Some(following) = vec.front() {
+                    if *following.start() == point + 1 {
+                        // point is the exact value needed to merge the 2 adjacent ranges
+                        let following = vec.pop_front().unwrap();
+                        vec.push_front(*front.start()..=*following.end());
+                        return vec;
+                    }
+                    vec.push_front(*front.start()..=point);
+                    return vec;
+                }
+                vec.push_front(*front.start()..=point);
+                return vec;
+            }
+            // effectively, return [head, rec_call(tail, point)]
+            let front = vec.pop_front().unwrap();
+            let mut recursive_call = insert_point(vec, point);
+            recursive_call.push_front(front);
+            recursive_call
         }
 
         fn insert_range(
-            mut vec: VecDeque<std::ops::RangeInclusive<isize>>,
+            mut deque: VecDeque<std::ops::RangeInclusive<isize>>,
             new_range: std::ops::RangeInclusive<isize>,
         ) -> VecDeque<std::ops::RangeInclusive<isize>> {
-            if vec.is_empty() {
-                vec.push_front(new_range);
-                vec
-            } else {
-                let current_range = vec.front().unwrap();
-                if *new_range.end() < (*current_range.start() - 1) {
-                    vec.push_front(new_range);
-                    vec
-                } else if *new_range.end() == (*current_range.start() - 1)
-                    || (*new_range.start() <= *current_range.start())
-                        && (*new_range.end() >= *current_range.start())
-                        && (*new_range.end() <= *current_range.end())
-                {
-                    let front = vec.pop_front().unwrap();
-                    let new_front = *new_range.start()..=*front.end();
-                    insert_range(vec, new_front)
-                } else if (*new_range.start() <= *current_range.start())
-                    && (*new_range.end() >= *current_range.end())
-                {
-                    vec.pop_front();
-                    insert_range(vec, new_range)
-                } else if (*new_range.start() >= *current_range.start())
-                    && (*new_range.start() <= *current_range.end())
-                    && (*new_range.end() >= *current_range.end())
-                    || *new_range.start() == (*current_range.end() + 1)
-                {
-                    let front = vec.pop_front().unwrap();
-                    let new_front = *front.start()..=*new_range.end();
-                    insert_range(vec, new_front)
-                } else if *new_range.start() > (*current_range.end() + 1) {
-                    // effectively, return [head, rec_call(tail, range)]
-                    let front = vec.pop_front().unwrap();
-                    let mut recursive_call = insert_range(vec, new_range);
-                    recursive_call.push_front(front);
-                    recursive_call
-                } else if (*new_range.start() >= *current_range.start())
-                    && (*new_range.end() <= *current_range.end())
-                {
-                    vec
-                } else {
-                    // insert clearly invalid sentinel to debug errors // unimplemented cases
-                    vec.push_back(0..=0);
-                    vec.push_back(new_range);
-                    vec
-                }
+            if deque.is_empty() {
+                deque.push_front(new_range);
+                return deque;
             }
+            let current_range = deque.front().unwrap();
+            if *new_range.end() < (*current_range.start() - 1) {
+                deque.push_front(new_range);
+                return deque;
+            }
+            if *new_range.end() == (*current_range.start() - 1)
+                || (*new_range.start() <= *current_range.start())
+                    && (*new_range.end() >= *current_range.start())
+                    && (*new_range.end() <= *current_range.end())
+            {
+                let front = deque.pop_front().unwrap();
+                let new_front = *new_range.start()..=*front.end();
+                return insert_range(deque, new_front);
+            }
+            if (*new_range.start() <= *current_range.start())
+                && (*new_range.end() >= *current_range.end())
+            {
+                deque.pop_front();
+                return insert_range(deque, new_range);
+            }
+            if (*new_range.start() >= *current_range.start())
+                && (*new_range.start() <= *current_range.end())
+                && (*new_range.end() >= *current_range.end())
+                || *new_range.start() == (*current_range.end() + 1)
+            {
+                let front = deque.pop_front().unwrap();
+                let new_front = *front.start()..=*new_range.end();
+                return insert_range(deque, new_front);
+            }
+            if (*new_range.start() >= *current_range.start())
+                && (*new_range.end() <= *current_range.end())
+            {
+                // noop, new_range is completely contained by range already present in deque
+                return deque;
+            }
+            // effectively, return [head, rec_call(tail, range)]
+            let front = deque.pop_front().unwrap();
+            let mut recursive_call = insert_range(deque, new_range);
+            recursive_call.push_front(front);
+            recursive_call
         }
 
         fn exclude_point(
@@ -2051,29 +2046,21 @@ fn day15(input: &str, part: Part) -> Solution {
             point: isize,
         ) -> VecDeque<std::ops::RangeInclusive<isize>> {
             if deque.is_empty() {
-                deque
-            } else {
-                let front = deque.front().unwrap();
-                if point >= *front.start() {
-                    if point > *front.end() {
-                        let front = deque.pop_front().unwrap();
-                        let mut deque = exclude_point(deque, point);
-                        deque.push_front(front);
-                        deque
-                    } else {
-                        let front = deque.pop_front().unwrap();
-                        let new_front = *front.start()..=(point - 1);
-                        let new_next = (point + 1)..=(*front.end());
-                        deque.push_front(new_next);
-                        deque.push_front(new_front);
-                        deque
-                    }
-                } else {
-                    deque.push_back(0..=0);
-                    deque.push_back(point..=point);
-                    deque
-                }
+                return deque;
             }
+            let front = deque.front().unwrap();
+            if *front.end() < point {
+                let front = deque.pop_front().unwrap();
+                let mut deque = exclude_point(deque, point);
+                deque.push_front(front);
+                return deque;
+            }
+            let front = deque.pop_front().unwrap();
+            let new_front = *front.start()..=(point - 1);
+            let new_next = (point + 1)..=(*front.end());
+            deque.push_front(new_next);
+            deque.push_front(new_front);
+            deque
         }
         assert_eq!(
             exclude_point(VecDeque::from([1..=10]), 8),
