@@ -44,10 +44,11 @@ impl Display for PartParseError {
 
 impl Error for PartParseError {}
 
-/// Solution is either a usize, isize, or string
+/// Solution can be any exactly one of these for any given problem part
 #[derive(Debug)]
 enum Solution {
-    UNumber(usize),
+    USize(usize),
+    U32(u32),
     U64(u64),
     INumber(isize),
     String(String),
@@ -55,7 +56,10 @@ enum Solution {
 impl Display for Solution {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Solution::UNumber(n) => {
+            Solution::USize(n) => {
+                write!(f, "{}", n)
+            }
+            Solution::U32(n) => {
                 write!(f, "{}", n)
             }
             Solution::U64(n) => {
@@ -112,8 +116,8 @@ fn day1(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -236,8 +240,8 @@ fn day2(input: &str, part: Part) -> Solution {
         })
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -295,8 +299,8 @@ fn day3(input: &str, part: Part) -> Solution {
             .sum()
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -351,8 +355,8 @@ fn day4(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -461,8 +465,8 @@ fn day6(input: &str, part: Part) -> Solution {
         slide_window_until_unique::<14>(input)
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -632,8 +636,8 @@ fn day7(input: &str, part: Part) -> Solution {
             .unwrap()
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -779,8 +783,8 @@ fn day8(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -904,8 +908,8 @@ fn day9(input: &str, part: Part) -> Solution {
     }
 
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -1294,8 +1298,8 @@ fn day11(input: &str, part: Part) -> Solution {
             .fold(1, |product, m| m.inspections * product)
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -1571,8 +1575,8 @@ fn day12(input: &str, part: Part) -> Solution {
             .unwrap()
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -1723,8 +1727,8 @@ fn day13(input: &str, part: Part) -> Solution {
         (two_index + 1) * (six_index + 1)
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -1884,8 +1888,8 @@ fn day14(input: &str, part: Part) -> Solution {
         sand_units
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
-        Part::Two => Solution::UNumber(part2(input)),
+        Part::One => Solution::USize(part1(input)),
+        Part::Two => Solution::USize(part2(input)),
     }
 }
 
@@ -2118,13 +2122,20 @@ fn day15(input: &str, part: Part) -> Solution {
         4_000_000u64 * x + y
     }
     match part {
-        Part::One => Solution::UNumber(part1(input)),
+        Part::One => Solution::USize(part1(input)),
         Part::Two => Solution::U64(part2(input)),
     }
 }
 
-fn day16(_input: &str, _part: Part) -> Solution {
-    Solution::String(String::from("not implemented"))
+/// solves the problem for day 16
+fn day16(input: &str, part: Part) -> Solution {
+    fn part1(_input: &str) -> u32 {
+        0
+    }
+    match part {
+        Part::One => Solution::U32(part1(input)),
+        Part::Two => Solution::String(String::from("not implemented")),
+    }
 }
 fn day17(_input: &str, _part: Part) -> Solution {
     Solution::String(String::from("not implemented"))
