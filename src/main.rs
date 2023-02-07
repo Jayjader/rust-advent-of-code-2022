@@ -2134,14 +2134,44 @@ fn day16(input: &str, part: Part) -> Solution {
     type Valve = String;
     type FlowRate = u32;
     type Nd = (Valve, FlowRate);
-    type Ed = (Valve, Valve);
-    struct Edges(Vec<Ed>);
 
-    fn flow_released_after_ticks(ticks: u32, rate: u32) -> u32 {
-        return ticks * rate;
+    #[derive(PartialEq, Eq, Debug, Clone)]
+    enum Action {
+        TurnOn(Valve),
+        MoveTo(Valve),
+    }
+    type Tick = u32;
+    #[derive(PartialEq, Eq, Debug)]
+    struct State {
+        total_flow_after_tick_30: FlowRate,
+        current_tick: Reverse<Tick>,
+        position: Valve,
+        turned_on: HashSet<Valve>,
+        actions: Vec<Action>,
+    }
+    impl PartialOrd for State {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+    impl Ord for State {
+        fn cmp(&self, other: &Self) -> Ordering {
+            match self
+                .total_flow_after_tick_30
+                .cmp(&other.total_flow_after_tick_30)
+            {
+                Ordering::Equal => match self.current_tick.cmp(&other.current_tick) {
+                    Ordering::Equal => self.turned_on.len().cmp(&other.turned_on.len()),
+                    others => others,
+                },
+                others => others,
+            }
+        }
     }
 
-    fn part1(input: &str) -> u32 {
+    fn parse_valves_and_tunnels(
+        input: &str,
+    ) -> (HashMap<Valve, FlowRate>, HashMap<Valve, Vec<String>>) {
         let line_regex = Regex::new(
             r"Valve (?P<valve>[A-Z]{2}) has flow rate=(?P<flow_rate>\d+); tunnels? leads? to valves? (?P<tunnels_to>[A-Z]{2}(?:, [A-Z]{2})*)")
             .unwrap();
@@ -2158,61 +2188,26 @@ fn day16(input: &str, part: Part) -> Solution {
                 ((String::from(valve), rate), tunnels)
             })
             .collect();
-        let valve_rates = nodes
-            .iter()
-            .fold(HashMap::new(), |mut map, ((valve, rate), _)| {
-                map.insert(valve, rate);
-                map
-            });
+        let valve_rates: HashMap<Valve, FlowRate> =
+            nodes
+                .iter()
+                .fold(HashMap::new(), |mut map, ((valve, rate), _)| {
+                    map.insert(valve.clone(), *rate);
+                    map
+                });
         let edges = nodes.iter().fold(
             HashMap::with_capacity(nodes.len()),
             |mut edges, (current_node, tunnels)| {
-                edges.insert(current_node.clone().0, tunnels);
-
-                // for edge in (tunnels)
-                //     .iter()
-                //     .map(|other_node| (current_node.0.clone(), other_node))
-                // {
-                //     edges.push(edge);
-                // }
+                edges.insert(current_node.clone().0, tunnels.clone());
                 edges
             },
         );
-        println!("{:?}\n{:?}\n{:?}", nodes, valve_rates, edges);
+        (valve_rates, edges)
+    }
 
-        #[derive(PartialEq, Eq, Debug, Clone)]
-        enum Action {
-            TurnOn(Valve),
-            MoveTo(Valve),
-        }
-        type Tick = u32;
-        #[derive(PartialEq, Eq, Debug)]
-        struct State {
-            total_flow_after_tick_30: FlowRate,
-            current_tick: Reverse<Tick>,
-            position: Valve,
-            turned_on: HashSet<Valve>,
-            actions: Vec<Action>,
-        }
-        impl PartialOrd for State {
-            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                Some(self.cmp(other))
-            }
-        }
-        impl Ord for State {
-            fn cmp(&self, other: &Self) -> Ordering {
-                match self
-                    .total_flow_after_tick_30
-                    .cmp(&other.total_flow_after_tick_30)
-                {
-                    Ordering::Equal => match self.current_tick.cmp(&other.current_tick) {
-                        Ordering::Equal => self.turned_on.len().cmp(&other.turned_on.len()),
-                        others => others,
-                    },
-                    others => others,
-                }
-            }
-        }
+    fn part1(input: &str) -> u32 {
+        let (valve_rates, edges) = parse_valves_and_tunnels(input);
+
         let mut stack = BinaryHeap::<State>::new();
         // current node <- AA
         // current tick <- 0
@@ -2224,7 +2219,7 @@ fn day16(input: &str, part: Part) -> Solution {
             actions: vec![Action::MoveTo(Valve::from("AA"))],
         });
         //
-        let non_zero_count = nodes.iter().filter(|((_, rate), _)| *rate > 0).count();
+        let non_zero_count = valve_rates.iter().filter(|(_, rate)| **rate > 0).count();
         let mut greatest_total_flow_rate_found_so_far = 0;
         // for tick from 1 to 30:
         for tick in 1..=30 {
@@ -2252,7 +2247,6 @@ fn day16(input: &str, part: Part) -> Solution {
                 let unopened: HashSet<Valve> = valve_rates
                     .keys()
                     .cloned()
-                    .cloned()
                     .collect::<HashSet<_>>()
                     .difference(&previous_state.turned_on)
                     .cloned()
@@ -2264,20 +2258,15 @@ fn day16(input: &str, part: Part) -> Solution {
                                 .iter()
                                 .map(|valve| valve_rates.get(valve).unwrap())
                                 .cloned()
-                                .cloned()
                                 .sum::<u32>())
                 {
-                    // println!(
-                    //     "with these {:?} we can't catch up to {}",
-                    //     unopened, greatest_total_flow_rate_found_so_far
-                    // );
                     // there's no way to get a better result by pursuing this line of action, so we just discard this list of actions for the next tick
                     continue;
                 }
                 // if flow rate > 0 and current node is off:
                 let current_valve = &previous_state.position;
                 let rate = valve_rates.get(current_valve).unwrap();
-                if **rate > 0 && !previous_state.turned_on.contains(current_valve) {
+                if *rate > 0 && !previous_state.turned_on.contains(current_valve) {
                     // push [turn on current node at tick == [previous total flow] + [flow rate] * [ticks from tick until 30]] onto stack
                     let mut next_turned_on = previous_state.turned_on.clone();
                     next_turned_on.insert(current_valve.clone());
@@ -2285,7 +2274,7 @@ fn day16(input: &str, part: Part) -> Solution {
                     next_actions.push(Action::TurnOn(current_valve.clone()));
                     next_stack.push(State {
                         total_flow_after_tick_30: previous_state.total_flow_after_tick_30
-                            + (**rate * (30 - tick)),
+                            + (*rate * (30 - tick)),
                         current_tick: Reverse(tick),
                         position: current_valve.clone(),
                         turned_on: next_turned_on,
@@ -2314,7 +2303,6 @@ fn day16(input: &str, part: Part) -> Solution {
                     if !previous_state.actions[slice_start..]
                         .contains(&Action::MoveTo(String::from(reachable_valve)))
                     {
-                        // println!("no loop found when moving to {}", reachable_valve);
                         // push [move to node at current tick == [previous total flow]] onto stack
                         let mut next_actions: Vec<Action> = previous_state.actions.to_vec();
                         next_actions.push(Action::MoveTo(reachable_valve.clone()));
@@ -2332,6 +2320,7 @@ fn day16(input: &str, part: Part) -> Solution {
         }
         stack.pop().unwrap().total_flow_after_tick_30
     }
+
     match part {
         Part::One => Solution::U32(part1(input)),
         Part::Two => Solution::String(String::from("not implemented")),
