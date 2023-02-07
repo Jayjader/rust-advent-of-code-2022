@@ -2137,11 +2137,6 @@ fn day16(input: &str, part: Part) -> Solution {
     type Ed = (Valve, Valve);
     struct Edges(Vec<Ed>);
 
-    #[derive(PartialEq, Eq, Debug, Clone)]
-    enum Action {
-        TurnOn(Valve),
-        MoveTo(Ed),
-    }
     fn flow_released_after_ticks(ticks: u32, rate: u32) -> u32 {
         return ticks * rate;
     }
@@ -2185,6 +2180,11 @@ fn day16(input: &str, part: Part) -> Solution {
         );
         println!("{:?}\n{:?}\n{:?}", nodes, valve_rates, edges);
 
+        #[derive(PartialEq, Eq, Debug, Clone)]
+        enum Action {
+            TurnOn(Valve),
+            MoveTo(Valve),
+        }
         type Tick = u32;
         #[derive(PartialEq, Eq, Debug)]
         struct State {
@@ -2220,15 +2220,19 @@ fn day16(input: &str, part: Part) -> Solution {
         stack.push(State {
             total_flow_after_tick_30: 0,
             current_tick: Reverse(0),
-            position: String::from("AA"),
+            position: Valve::from("AA"),
             turned_on: Default::default(),
-            actions: vec![],
+            actions: vec![Action::MoveTo(Valve::from("AA"))],
         });
         //
         // for tick from 1 to 30:
         let non_zero_count = nodes.iter().filter(|((_, rate), _)| *rate > 0).count();
-        for tick in 1..=6 {
-            println!("stack at tick {}: {:?}", tick, stack);
+        for tick in 1..=30 {
+            println!(
+                "\n===###=== stack at start of tick {}: (len: {}) ===###===",
+                tick,
+                stack.len(),
+            );
             // for each previous state:
             let mut next_stack = BinaryHeap::new();
             while let Some(previous_state) = stack.pop() {
@@ -2244,17 +2248,11 @@ fn day16(input: &str, part: Part) -> Solution {
                 // if flow rate > 0 and current node is off:
                 let current_valve = &previous_state.position;
                 let rate = valve_rates.get(current_valve).unwrap();
-                // nodes
-                // .iter()
-                // .find(|node| node.0 .0 == *current_valve)
-                // .unwrap()
-                // .0
-                //  .1;
                 if **rate > 0 && !previous_state.turned_on.contains(current_valve) {
-                    println!(
-                        "rate {} > 0 and valve '{}' not yet turned on",
-                        rate, current_valve
-                    );
+                    // println!(
+                    //     "rate {} > 0 and valve '{}' not yet turned on",
+                    //     rate, current_valve
+                    // );
                     // push [turn on current node at tick == [previous total flow] + [flow rate] * [ticks from tick until 30]] onto stack
                     let mut next_turned_on = previous_state.turned_on.clone();
                     next_turned_on.insert(current_valve.clone());
@@ -2262,7 +2260,7 @@ fn day16(input: &str, part: Part) -> Solution {
                     next_actions.push(Action::TurnOn(current_valve.clone()));
                     next_stack.push(State {
                         total_flow_after_tick_30: previous_state.total_flow_after_tick_30
-                            + **rate * (30 - tick),
+                            + (**rate * (30 - tick)),
                         current_tick: Reverse(tick),
                         position: current_valve.clone(),
                         turned_on: next_turned_on,
@@ -2276,24 +2274,48 @@ fn day16(input: &str, part: Part) -> Solution {
                     .iter()
                     .filter(|valve| *valve != current_valve)
                 {
-                    // push [move to node at current tick == [previous total flow]] onto stack
-                    let mut next_actions: Vec<Action> = previous_state.actions.to_vec();
-                    next_actions.push(Action::MoveTo((
-                        current_valve.clone(),
-                        reachable_valve.clone(),
-                    )));
-                    next_stack.push(State {
-                        total_flow_after_tick_30: previous_state.total_flow_after_tick_30,
-                        current_tick: Reverse(tick),
-                        position: reachable_valve.clone(),
-                        turned_on: previous_state.turned_on.clone(),
-                        actions: next_actions,
-                    })
+                    let last_turn_on_valve_index =
+                        previous_state.actions.iter().enumerate().rev().find_map(
+                            |(index, action)| match action {
+                                Action::TurnOn(_) => Some(index),
+                                Action::MoveTo(_) => None,
+                            },
+                        );
+                    // if last_turn_on_valve_index.is_some() {
+                    //     println!(
+                    //         "valve last turned on at index {:?}",
+                    //         last_turn_on_valve_index
+                    //     );
+                    // }
+                    // ignore actions that would make us loop back on our tracks without turning on any new valves
+                    // we will end up turning them on later anyways after a non-minimal time spent moving
+                    let slice_start = last_turn_on_valve_index
+                        .map(|index| index - 1 /* MoveTo action is 1 before the TurnOn that can be detected in the following if statement */)
+                        .unwrap_or(0);
+                    if !previous_state.actions[slice_start..]
+                        .contains(&Action::MoveTo(String::from(reachable_valve)))
+                    {
+                        // println!("no loop found when moving to {}", reachable_valve);
+                        // push [move to node at current tick == [previous total flow]] onto stack
+                        let mut next_actions: Vec<Action> = previous_state.actions.to_vec();
+                        next_actions.push(Action::MoveTo(reachable_valve.clone()));
+                        next_stack.push(State {
+                            total_flow_after_tick_30: previous_state.total_flow_after_tick_30,
+                            current_tick: Reverse(tick),
+                            position: reachable_valve.clone(),
+                            turned_on: previous_state.turned_on.clone(),
+                            actions: next_actions,
+                        })
+                    }
                 }
             }
             stack = next_stack;
+            // println!("stack contents after tick {}", tick);
+            // for entry in &stack {
+            //     println!("{:?}", entry)
+            // }
         }
-        0
+        stack.pop().unwrap().total_flow_after_tick_30
     }
     match part {
         Part::One => Solution::U32(part1(input)),
@@ -2384,7 +2406,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         day15, day16, day17, day18, day19, day20,
     ];
     let today = 16;
-    let prod_or_test = "unit";
+    let prod_or_test = "test";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
