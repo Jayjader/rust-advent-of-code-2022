@@ -1475,9 +1475,11 @@ fn day12(input: &str, part: Part) -> Solution {
         let mut frame_index = 0;
         while !to_visit.is_empty() {
             println!("=== frame {} ===", frame_index);
-            let output_file =
-                File::create(format!("./output/frame{}.ppm", frame_index).as_str()).unwrap();
-            write_distance_map(output_file, &min_distance_precedence_map, dimensions);
+            write_distance_map(
+                File::create(format!("./output/frame{}.ppm", frame_index).as_str()).unwrap(),
+                &min_distance_precedence_map,
+                dimensions,
+            );
             let next_visited = to_visit.pop().unwrap();
             let (x, y) = next_visited.0.position;
             let (current_best_dist, _prev) = min_distance_precedence_map.get(&(x, y)).unwrap();
@@ -2129,7 +2131,168 @@ fn day15(input: &str, part: Part) -> Solution {
 
 /// solves the problem for day 16
 fn day16(input: &str, part: Part) -> Solution {
-    fn part1(_input: &str) -> u32 {
+    type Valve = String;
+    type FlowRate = u32;
+    type Nd = (Valve, FlowRate);
+    type Ed = (Valve, Valve);
+    struct Edges(Vec<Ed>);
+
+    #[derive(PartialEq, Eq, Debug, Clone)]
+    enum Action {
+        TurnOn(Valve),
+        MoveTo(Ed),
+    }
+    fn flow_released_after_ticks(ticks: u32, rate: u32) -> u32 {
+        return ticks * rate;
+    }
+
+    fn part1(input: &str) -> u32 {
+        let line_regex = Regex::new(
+            r"Valve (?P<valve>[A-Z]{2}) has flow rate=(?P<flow_rate>\d+); tunnels? leads? to valves? (?P<tunnels_to>[A-Z]{2}(?:, [A-Z]{2})*)")
+            .unwrap();
+        let nodes: Vec<(Nd, Vec<String>)> = input
+            .lines()
+            .flat_map(|line| line_regex.captures(line))
+            .map(|captures| {
+                let rate = captures["flow_rate"].parse::<u32>().unwrap();
+                let valve = &captures["valve"];
+                let tunnels = captures["tunnels_to"]
+                    .split(", ")
+                    .map(String::from)
+                    .collect();
+                ((String::from(valve), rate), tunnels)
+            })
+            .collect();
+        let valve_rates = nodes
+            .iter()
+            .fold(HashMap::new(), |mut map, ((valve, rate), _)| {
+                map.insert(valve, rate);
+                map
+            });
+        let edges = nodes.iter().fold(
+            HashMap::with_capacity(nodes.len()),
+            |mut edges, (current_node, tunnels)| {
+                edges.insert(current_node.clone().0, tunnels);
+
+                // for edge in (tunnels)
+                //     .iter()
+                //     .map(|other_node| (current_node.0.clone(), other_node))
+                // {
+                //     edges.push(edge);
+                // }
+                edges
+            },
+        );
+        println!("{:?}\n{:?}\n{:?}", nodes, valve_rates, edges);
+
+        type Tick = u32;
+        #[derive(PartialEq, Eq, Debug)]
+        struct State {
+            total_flow_after_tick_30: FlowRate,
+            current_tick: Reverse<Tick>,
+            position: Valve,
+            turned_on: HashSet<Valve>,
+            actions: Vec<Action>,
+        }
+        impl PartialOrd for State {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+        impl Ord for State {
+            fn cmp(&self, other: &Self) -> Ordering {
+                match self
+                    .total_flow_after_tick_30
+                    .cmp(&other.total_flow_after_tick_30)
+                {
+                    Ordering::Equal => match self.current_tick.cmp(&other.current_tick) {
+                        Ordering::Equal => self.turned_on.len().cmp(&other.turned_on.len()),
+                        others => others,
+                    },
+                    others => others,
+                }
+            }
+        }
+        // let mut stack: BinaryHeap<(FlowRate, HashSet<Valve>)> = Vec::new();
+        let mut stack = BinaryHeap::<State>::new();
+        // current node <- AA
+        // current tick <- 0
+        stack.push(State {
+            total_flow_after_tick_30: 0,
+            current_tick: Reverse(0),
+            position: String::from("AA"),
+            turned_on: Default::default(),
+            actions: vec![],
+        });
+        //
+        // for tick from 1 to 30:
+        let non_zero_count = nodes.iter().filter(|((_, rate), _)| *rate > 0).count();
+        for tick in 1..=6 {
+            println!("stack at tick {}: {:?}", tick, stack);
+            // for each previous state:
+            let mut next_stack = BinaryHeap::new();
+            while let Some(previous_state) = stack.pop() {
+                // }
+                // for previous_state in stack.into_iter() {
+                if previous_state.turned_on.len() == non_zero_count {
+                    next_stack.push(State {
+                        current_tick: Reverse(tick),
+                        ..previous_state
+                    });
+                    continue;
+                }
+                // if flow rate > 0 and current node is off:
+                let current_valve = &previous_state.position;
+                let rate = valve_rates.get(current_valve).unwrap();
+                // nodes
+                // .iter()
+                // .find(|node| node.0 .0 == *current_valve)
+                // .unwrap()
+                // .0
+                //  .1;
+                if **rate > 0 && !previous_state.turned_on.contains(current_valve) {
+                    println!(
+                        "rate {} > 0 and valve '{}' not yet turned on",
+                        rate, current_valve
+                    );
+                    // push [turn on current node at tick == [previous total flow] + [flow rate] * [ticks from tick until 30]] onto stack
+                    let mut next_turned_on = previous_state.turned_on.clone();
+                    next_turned_on.insert(current_valve.clone());
+                    let mut next_actions: Vec<Action> = previous_state.actions.to_vec();
+                    next_actions.push(Action::TurnOn(current_valve.clone()));
+                    next_stack.push(State {
+                        total_flow_after_tick_30: previous_state.total_flow_after_tick_30
+                            + **rate * (30 - tick),
+                        current_tick: Reverse(tick),
+                        position: current_valve.clone(),
+                        turned_on: next_turned_on,
+                        actions: next_actions,
+                    })
+                }
+                // for node in [edges from current node]:
+                for reachable_valve in edges
+                    .get(current_valve)
+                    .unwrap()
+                    .iter()
+                    .filter(|valve| *valve != current_valve)
+                {
+                    // push [move to node at current tick == [previous total flow]] onto stack
+                    let mut next_actions: Vec<Action> = previous_state.actions.to_vec();
+                    next_actions.push(Action::MoveTo((
+                        current_valve.clone(),
+                        reachable_valve.clone(),
+                    )));
+                    next_stack.push(State {
+                        total_flow_after_tick_30: previous_state.total_flow_after_tick_30,
+                        current_tick: Reverse(tick),
+                        position: reachable_valve.clone(),
+                        turned_on: previous_state.turned_on.clone(),
+                        actions: next_actions,
+                    })
+                }
+            }
+            stack = next_stack;
+        }
         0
     }
     match part {
@@ -2215,12 +2378,13 @@ fn day20(input: &str, part: Part) -> Solution {
 
 /// passes problem input to solver for the given day
 fn main() -> Result<(), Box<dyn Error>> {
+    //todo: extract visualization generation into separate binaries and/or a command line argument flag
     let days = [
         day1, day2, day3, day4, day5, day6, day7, day8, day9, day10, day11, day12, day13, day14,
         day15, day16, day17, day18, day19, day20,
     ];
-    let today = 15;
-    let prod_or_test = "prod";
+    let today = 16;
+    let prod_or_test = "unit";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
