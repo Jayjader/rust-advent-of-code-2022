@@ -2213,7 +2213,6 @@ fn day16(input: &str, part: Part) -> Solution {
                 }
             }
         }
-        // let mut stack: BinaryHeap<(FlowRate, HashSet<Valve>)> = Vec::new();
         let mut stack = BinaryHeap::<State>::new();
         // current node <- AA
         // current tick <- 0
@@ -2225,8 +2224,9 @@ fn day16(input: &str, part: Part) -> Solution {
             actions: vec![Action::MoveTo(Valve::from("AA"))],
         });
         //
-        // for tick from 1 to 30:
         let non_zero_count = nodes.iter().filter(|((_, rate), _)| *rate > 0).count();
+        let mut greatest_total_flow_rate_found_so_far = 0;
+        // for tick from 1 to 30:
         for tick in 1..=30 {
             println!(
                 "\n===###=== stack at start of tick {}: (len: {}) ===###===",
@@ -2236,23 +2236,48 @@ fn day16(input: &str, part: Part) -> Solution {
             // for each previous state:
             let mut next_stack = BinaryHeap::new();
             while let Some(previous_state) = stack.pop() {
-                // }
-                // for previous_state in stack.into_iter() {
+                greatest_total_flow_rate_found_so_far = previous_state
+                    .total_flow_after_tick_30
+                    .max(greatest_total_flow_rate_found_so_far);
+                // skip exploring further actions if all valves are already on (the actions wouldn't bring new results)
                 if previous_state.turned_on.len() == non_zero_count {
+                    // keep this list of actions for future comparison with other lists of actions
                     next_stack.push(State {
                         current_tick: Reverse(tick),
                         ..previous_state
                     });
                     continue;
                 }
+                // if all remaining un-opened valves were magically opened this tick, could we do better than the current best list of actions?
+                let unopened: HashSet<Valve> = valve_rates
+                    .keys()
+                    .cloned()
+                    .cloned()
+                    .collect::<HashSet<_>>()
+                    .difference(&previous_state.turned_on)
+                    .cloned()
+                    .collect();
+                if greatest_total_flow_rate_found_so_far
+                    > (previous_state.total_flow_after_tick_30
+                        + (30 - tick)
+                            * unopened
+                                .iter()
+                                .map(|valve| valve_rates.get(valve).unwrap())
+                                .cloned()
+                                .cloned()
+                                .sum::<u32>())
+                {
+                    // println!(
+                    //     "with these {:?} we can't catch up to {}",
+                    //     unopened, greatest_total_flow_rate_found_so_far
+                    // );
+                    // there's no way to get a better result by pursuing this line of action, so we just discard this list of actions for the next tick
+                    continue;
+                }
                 // if flow rate > 0 and current node is off:
                 let current_valve = &previous_state.position;
                 let rate = valve_rates.get(current_valve).unwrap();
                 if **rate > 0 && !previous_state.turned_on.contains(current_valve) {
-                    // println!(
-                    //     "rate {} > 0 and valve '{}' not yet turned on",
-                    //     rate, current_valve
-                    // );
                     // push [turn on current node at tick == [previous total flow] + [flow rate] * [ticks from tick until 30]] onto stack
                     let mut next_turned_on = previous_state.turned_on.clone();
                     next_turned_on.insert(current_valve.clone());
@@ -2274,6 +2299,8 @@ fn day16(input: &str, part: Part) -> Solution {
                     .iter()
                     .filter(|valve| *valve != current_valve)
                 {
+                    // ignore actions that would make us loop back on our tracks without turning on any new valves
+                    // we will end up turning them on later anyways after a non-minimal time spent moving
                     let last_turn_on_valve_index =
                         previous_state.actions.iter().enumerate().rev().find_map(
                             |(index, action)| match action {
@@ -2281,14 +2308,6 @@ fn day16(input: &str, part: Part) -> Solution {
                                 Action::MoveTo(_) => None,
                             },
                         );
-                    // if last_turn_on_valve_index.is_some() {
-                    //     println!(
-                    //         "valve last turned on at index {:?}",
-                    //         last_turn_on_valve_index
-                    //     );
-                    // }
-                    // ignore actions that would make us loop back on our tracks without turning on any new valves
-                    // we will end up turning them on later anyways after a non-minimal time spent moving
                     let slice_start = last_turn_on_valve_index
                         .map(|index| index - 1 /* MoveTo action is 1 before the TurnOn that can be detected in the following if statement */)
                         .unwrap_or(0);
@@ -2310,10 +2329,6 @@ fn day16(input: &str, part: Part) -> Solution {
                 }
             }
             stack = next_stack;
-            // println!("stack contents after tick {}", tick);
-            // for entry in &stack {
-            //     println!("{:?}", entry)
-            // }
         }
         stack.pop().unwrap().total_flow_after_tick_30
     }
@@ -2406,7 +2421,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         day15, day16, day17, day18, day19, day20,
     ];
     let today = 16;
-    let prod_or_test = "test";
+    let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
