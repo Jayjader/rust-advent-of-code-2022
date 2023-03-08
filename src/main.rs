@@ -2047,27 +2047,6 @@ fn day15(input: &str, part: Part) -> Solution {
             recursive_call
         }
 
-        fn exclude_point(
-            mut deque: VecDeque<std::ops::RangeInclusive<isize>>,
-            point: isize,
-        ) -> VecDeque<std::ops::RangeInclusive<isize>> {
-            if deque.is_empty() {
-                return deque;
-            }
-            let front = deque.front().unwrap();
-            if *front.end() < point {
-                let front = deque.pop_front().unwrap();
-                let mut deque = exclude_point(deque, point);
-                deque.push_front(front);
-                return deque;
-            }
-            let front = deque.pop_front().unwrap();
-            let new_front = *front.start()..=(point - 1);
-            let new_next = (point + 1)..=(*front.end());
-            deque.push_front(new_next);
-            deque.push_front(new_front);
-            deque
-        }
         const MAX_X: isize = 4_000_000;
         // const MAX_X: isize = 20;
         const MIN_X: isize = 0;
