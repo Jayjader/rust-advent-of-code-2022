@@ -24,14 +24,14 @@ enum Part {
 #[derive(Debug, Clone)]
 struct PartParseError(usize);
 
-impl TryInto<Part> for usize {
+impl TryFrom<usize> for Part {
     type Error = PartParseError;
 
-    fn try_into(self) -> Result<Part, Self::Error> {
-        match self {
+    fn try_from(value: usize) -> Result<Self, Self::Error> {
+        match value {
             1 => Ok(Part::One),
             2 => Ok(Part::Two),
-            _ => Err(PartParseError(self)),
+            _ => Err(PartParseError(value)),
         }
     }
 }
