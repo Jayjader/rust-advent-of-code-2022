@@ -577,7 +577,7 @@ fn day7(input: &str, part: Part) -> Solution {
             .map(|entry| match entry {
                 DirEntry::File(_, size) => *size,
                 DirEntry::Dir(name) => {
-                    let path = [dir.as_str(), *name].join("/");
+                    let path = [dir.as_str(), name].join("/");
                     total_size(tree, path, cache)
                 }
             })
