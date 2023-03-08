@@ -104,6 +104,7 @@ fn parse_valves_and_tunnels(
 /// solves the problem for day 16
 pub fn day16(input: &str, part: Part) -> Solution {
     fn part1(input: &str) -> u32 {
+        let last_tick = 30;
         let (valve_rates, edges) = parse_valves_and_tunnels(input);
 
         let mut stack = BinaryHeap::<State<1>>::new();
@@ -120,7 +121,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
         let non_zero_count = valve_rates.iter().filter(|(_, rate)| **rate > 0).count();
         let mut greatest_total_flow_rate_found_so_far = 0;
         // for tick from 1 to 30:
-        for tick in 1..=30 {
+        for tick in 1..=last_tick {
             println!(
                 "\n===###=== stack at start of tick {}: (len: {}) ===###===",
                 tick,
@@ -151,7 +152,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
                     .collect();
                 if greatest_total_flow_rate_found_so_far
                     > (previous_state.total_flow_after_tick_30
-                        + (30 - tick)
+                        + (last_tick - tick)
                             * unopened
                                 .iter()
                                 .map(|valve| valve_rates.get(valve).unwrap())
@@ -172,7 +173,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
                     next_actions.push([Action::TurnOn(current_valve[0].clone())]);
                     next_stack.push(State {
                         total_flow_after_tick_30: previous_state.total_flow_after_tick_30
-                            + (*rate * (30 - tick)),
+                            + (*rate * (last_tick - tick)),
                         current_tick: Reverse(tick),
                         position: current_valve.clone(),
                         turned_on: next_turned_on,
@@ -220,6 +221,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
     }
 
     fn part2(input: &str) -> u32 {
+        let last_tick = 26;
         let (valve_rates, edges) = parse_valves_and_tunnels(input);
 
         let mut stack = BinaryHeap::<State<2>>::new();
@@ -239,7 +241,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
         let non_zero_count = valve_rates.iter().filter(|(_, rate)| **rate > 0).count();
         let mut greatest_total_flow_rate_found_so_far = 0;
         // for tick from 1 to 26:
-        for tick in 1..=26 {
+        for tick in 1..=last_tick {
             println!(
                 "\n===###=== stack at start of tick {}: (len: {}) ===###===",
                 tick,
@@ -271,7 +273,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
                     .collect();
                 if greatest_total_flow_rate_found_so_far
                     > (previous_state.total_flow_after_tick_30
-                        + (26 - tick)
+                        + (last_tick - tick)
                             * unopened
                                 .iter()
                                 .map(|valve| valve_rates.get(valve).unwrap())
@@ -301,7 +303,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
                         next_action[actor_index] = Action::TurnOn(current_valve.to_owned());
 
                         next_state.total_flow_after_tick_30 =
-                            previous_state.total_flow_after_tick_30 + (*rate * (26 - tick));
+                            previous_state.total_flow_after_tick_30 + (*rate * (last_tick - tick));
                         next_state.position[actor_index] = current_valve.to_owned();
                         next_state.turned_on.insert(current_valve.to_owned());
                     }
