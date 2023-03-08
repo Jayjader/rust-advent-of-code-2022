@@ -2121,12 +2121,12 @@ fn day16(input: &str, part: Part) -> Solution {
     }
     type Tick = u32;
     #[derive(PartialEq, Eq, Debug)]
-    struct State<const number_of_actors: usize> {
+    struct State<const NUMBER_OF_ACTORS: usize> {
         total_flow_after_tick_30: FlowRate,
         current_tick: Reverse<Tick>,
-        position: [Valve; number_of_actors],
+        position: [Valve; NUMBER_OF_ACTORS],
         turned_on: HashSet<Valve>,
-        actions: Vec<[Action; number_of_actors]>,
+        actions: Vec<[Action; NUMBER_OF_ACTORS]>,
     }
     impl PartialOrd for State<1> {
         fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
