@@ -2469,13 +2469,13 @@ fn day16(input: &str, part: Part) -> Solution {
     }
 }
 fn day17(_input: &str, _part: Part) -> Solution {
-    Solution::String(String::from("not implemented"))
+    unimplemented!();
 }
 fn day18(_input: &str, _part: Part) -> Solution {
-    Solution::String(String::from("not implemented"))
+    unimplemented!();
 }
 fn day19(_input: &str, _part: Part) -> Solution {
-    Solution::String(String::from("not implemented"))
+    unimplemented!();
 }
 
 /// solves the problem for day 20
