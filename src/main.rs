@@ -1,4 +1,3 @@
-extern crate core;
 extern crate regex;
 
 use core::convert::TryFrom;
