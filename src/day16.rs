@@ -123,14 +123,22 @@ pub fn day16(input: &str, part: Part) -> Solution {
         let mut greatest_total_flow_rate_found_so_far = 0;
         // for tick from 1 to 30:
         for tick in 1..=last_tick {
+            /*
             println!(
                 "\n===###=== stack at start of tick {}: (len: {}) ===###===",
                 tick,
                 stack.len(),
             );
+            */
             // for each previous state:
             let mut next_stack = BinaryHeap::new();
+            let mut iteration_counter = 0;
             while let Some(previous_state) = stack.pop() {
+                iteration_counter += 1;
+                // empirically, gives same result as "unbounded" stack, in a fraction of the execution time
+                if iteration_counter > 500 {
+                    break;
+                }
                 greatest_total_flow_rate_found_so_far = previous_state
                     .total_flow_after_tick_30
                     .max(greatest_total_flow_rate_found_so_far);
