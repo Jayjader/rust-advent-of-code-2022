@@ -251,7 +251,25 @@ pub fn day16(input: &str, part: Part) -> Solution {
             // println!("{:?}", &stack);
             // for each previous state:
             let mut next_stack = BinaryHeap::new();
+            let mut iteration_counter = 0;
             while let Some(previous_state) = stack.pop() {
+                iteration_counter += 1;
+                /*
+                if tick >= 13 && iteration_counter % 50_000 == 0 {
+                    println!(
+                        "iteration {} of tick {}\ttick max flow rate: {}\titeration flow rate: {}",
+                        iteration_counter,
+                        tick,
+                        greatest_total_flow_rate_found_so_far,
+                        previous_state.total_flow_after_tick_30
+                    );
+                }
+                */
+                // inspection of actual execution traces tells us that, past 2 million different
+                // strategies, the projected flow is one fourth the current max / best strategy
+                if iteration_counter > 2_000_000 {
+                    break;
+                }
                 greatest_total_flow_rate_found_so_far = previous_state
                     .total_flow_after_tick_30
                     .max(greatest_total_flow_rate_found_so_far);
@@ -322,15 +340,15 @@ pub fn day16(input: &str, part: Part) -> Solution {
                     .iter()
                     .cartesian_product(possible_actions[1].iter())
                     .filter(|(action_0, action_1)| {
+                        // remove action pairs representing both actors turning on the same valve
+                        // it's easier to naively generate the cartesian product and then filter it
+                        // than try to directly generate only the action pairs that are valid
                         if let Action::TurnOn(valve_0) = action_0 {
                             if let Action::TurnOn(valve_1) = action_1 {
-                                valve_0 != valve_1
-                            } else {
-                                true
+                                return valve_0 != valve_1;
                             }
-                        } else {
-                            true
                         }
+                        true
                     })
                     .collect_vec();
                 // println!("possible action pairs: {:?}", possible_action_pairs);
