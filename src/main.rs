@@ -118,7 +118,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         day19,
         day20::day20,
     ];
-    let today = 12;
+    let today = 16;
     let prod_or_test = "prod";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {

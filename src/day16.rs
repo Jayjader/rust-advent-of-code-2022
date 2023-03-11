@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
@@ -247,7 +248,7 @@ pub fn day16(input: &str, part: Part) -> Solution {
                 tick,
                 stack.len(),
             );
-            println!("{:?}", &stack);
+            // println!("{:?}", &stack);
             // for each previous state:
             let mut next_stack = BinaryHeap::new();
             while let Some(previous_state) = stack.pop() {
@@ -283,84 +284,93 @@ pub fn day16(input: &str, part: Part) -> Solution {
                     // there's no way to get a better result by pursuing this line of action, so we just discard this list of actions for the next tick
                     continue;
                 }
-
-                let mut next_action = [
-                    Action::TurnOn("AA".to_string()),
-                    Action::TurnOn("AA".to_string()),
-                ];
-                let mut next_state = State {
-                    total_flow_after_tick_30: previous_state.total_flow_after_tick_30,
-                    current_tick: Reverse(tick),
-                    position: [Valve::from("AA"), Valve::from("AA")],
-                    turned_on: previous_state.turned_on.clone(),
-                    actions: previous_state.actions.clone(),
-                };
-                for (actor_index, current_valve) in previous_state.position.iter().enumerate() {
-                    // if flow rate > 0 and current node is off:
-                    let rate = valve_rates.get(current_valve).unwrap();
-                    if *rate > 0 && !next_state.turned_on.contains(current_valve) {
-                        // push [turn on current node at tick == [previous total flow] + [flow rate] * [ticks from tick until 26]] onto stack
-                        next_action[actor_index] = Action::TurnOn(current_valve.to_owned());
-
-                        next_state.total_flow_after_tick_30 =
-                            previous_state.total_flow_after_tick_30 + (*rate * (last_tick - tick));
-                        next_state.position[actor_index] = current_valve.to_owned();
-                        next_state.turned_on.insert(current_valve.to_owned());
-                    }
-
-                    // for node in [edges from current node]:
-                    for reachable_valve in edges
-                        .get(current_valve)
-                        .unwrap()
-                        .iter()
-                        .filter(|valve| *valve != current_valve)
-                    {
-                        // ignore actions that would make us loop back on our tracks without turning on any new valves
-                        // we will end up turning them on later anyways after a non-minimal time spent moving
-                        let last_turn_on_valve_index =
-                            previous_state.actions.iter().enumerate().rev().find_map(
-                                |(index, action)| match action {
-                                    [_, Action::TurnOn(_)] => Some(index),
-                                    [Action::TurnOn(_), _] => Some(index),
-                                    [_, _] => None,
-                                },
-                            );
-                        let slice_start = last_turn_on_valve_index
-                        .map(|index| index - 1 /* MoveTo action is 1 before the TurnOn that can be detected in the following if statement */)
-                        .unwrap_or(0);
-                        if !previous_state.actions[slice_start..]
+                let possible_actions = previous_state
+                    .position
+                    .iter()
+                    .enumerate()
+                    .map(|(actor_index, current_valve)| {
+                        let mut actions_from_position = edges
+                            .get(current_valve)
+                            .unwrap()
                             .iter()
-                            .any(|action_array| {
-                                action_array[actor_index]
-                                    == Action::MoveTo(String::from(reachable_valve))
+                            .filter(|valve| *valve != current_valve)
+                            .map(|valve| Action::MoveTo(valve.to_owned()))
+                            .filter(|valve| {
+                                let last_turn_on_valve_index =
+                                    previous_state.actions.iter().enumerate().rev().find_map(
+                                        |(index, action)| match action[actor_index] {
+                                            Action::TurnOn(_) => Some(index),
+                                            _ => None,
+                                        },
+                                    );
+                                !previous_state.actions
+                                    [last_turn_on_valve_index.map(|index| index - 1).unwrap_or(0)..]
+                                    .iter()
+                                    .any(|action| action[actor_index] == *valve)
                             })
-                        // .contains(&Action::MoveTo(String::from(reachable_valve)))
+                            .collect::<Vec<_>>();
+                        if *valve_rates.get(current_valve).unwrap() > 0
+                            && !previous_state.turned_on.contains(current_valve)
                         {
-                            // push [move to node at current tick == [previous total flow]] onto stack
-                            // let mut next_actions: Vec<Action> = previous_state.actions.to_vec();
-                            next_action[actor_index] = Action::MoveTo(reachable_valve.to_owned());
-                            // next_actions.push(Action::MoveTo(reachable_valve.clone()));
-                            next_state.position[actor_index] = reachable_valve.to_owned();
-                            // next_stack.push(State {
-                            // total_flow_after_tick_30: previous_state.total_flow_after_tick_30,
-                            // current_tick: Reverse(tick),
-                            // position: reachable_valve.clone(),
-                            // turned_on: previous_state.turned_on.clone(),
-                            // actions: next_actions,
-                            // })
+                            actions_from_position.push(Action::TurnOn(current_valve.to_owned()));
                         }
+                        actions_from_position
+                    })
+                    .collect::<Vec<_>>();
+                // println!("possible actions: {:?}", possible_actions);
+                let possible_action_pairs = possible_actions[0]
+                    .iter()
+                    .cartesian_product(possible_actions[1].iter())
+                    .filter(|(action_0, action_1)| {
+                        if let Action::TurnOn(valve_0) = action_0 {
+                            if let Action::TurnOn(valve_1) = action_1 {
+                                valve_0 != valve_1
+                            } else {
+                                true
+                            }
+                        } else {
+                            true
+                        }
+                    })
+                    .collect_vec();
+                // println!("possible action pairs: {:?}", possible_action_pairs);
+                for action_pair in possible_action_pairs {
+                    let next_total_flow = (match action_pair.0 {
+                        Action::TurnOn(valve) => *valve_rates.get(valve).unwrap(),
+                        Action::MoveTo(_) => 0,
+                    } * (last_tick - tick))
+                        + (match action_pair.1 {
+                            Action::TurnOn(valve) => *valve_rates.get(valve).unwrap(),
+                            Action::MoveTo(_) => 0,
+                        } * (last_tick - tick))
+                        + previous_state.total_flow_after_tick_30;
+                    let next_position = [
+                        match action_pair.0 {
+                            Action::TurnOn(valve) => valve.to_owned(),
+                            Action::MoveTo(valve) => valve.to_owned(),
+                        },
+                        match action_pair.1 {
+                            Action::TurnOn(valve) => valve.to_owned(),
+                            Action::MoveTo(valve) => valve.to_owned(),
+                        },
+                    ];
+                    let mut next_turned_on = previous_state.turned_on.clone();
+                    if let Action::TurnOn(valve) = action_pair.0 {
+                        next_turned_on.insert(valve.to_owned());
                     }
+                    if let Action::TurnOn(valve) = action_pair.1 {
+                        next_turned_on.insert(valve.to_owned());
+                    }
+                    let mut next_actions = previous_state.actions.to_vec();
+                    next_actions.push([action_pair.0.to_owned(), action_pair.1.to_owned()]);
+                    next_stack.push(State {
+                        total_flow_after_tick_30: next_total_flow,
+                        current_tick: Reverse(tick),
+                        position: next_position,
+                        turned_on: next_turned_on,
+                        actions: next_actions,
+                    })
                 }
-                // next_stack.push(State {
-                //     total_flow_after_tick_30: previous_state.total_flow_after_tick_30
-                //         + (*rate * (30 - tick)),
-                //     current_tick: Reverse(tick),
-                //     position: current_valve.clone(),
-                //     turned_on: next_turned_on,
-                //     actions: next_actions,
-                // })
-                next_state.actions.push(next_action);
-                next_stack.push(next_state);
             }
             stack = next_stack;
         }
