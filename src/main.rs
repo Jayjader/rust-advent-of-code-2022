@@ -14,6 +14,7 @@ mod day13;
 mod day14;
 mod day15;
 mod day16;
+mod day17;
 mod day2;
 mod day20;
 mod day3;
@@ -83,9 +84,6 @@ impl Display for Solution {
     }
 }
 
-fn day17(_input: &str, _part: Part) -> Solution {
-    unimplemented!();
-}
 fn day18(_input: &str, _part: Part) -> Solution {
     unimplemented!();
 }
@@ -113,13 +111,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         day14::day14,
         day15::day15,
         day16::day16,
-        day17,
+        day17::day17,
         day18,
         day19,
         day20::day20,
     ];
-    let today = 16;
-    let prod_or_test = "prod";
+    let today = 17;
+    let prod_or_test = "test";
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         let day = days[today - 1];
