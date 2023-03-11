@@ -243,11 +243,11 @@ pub fn day16(input: &str, part: Part) -> Solution {
         let mut greatest_total_flow_rate_found_so_far = 0;
         // for tick from 1 to 26:
         for tick in 1..=last_tick {
-            println!(
-                "\n===###=== stack at start of tick {}: (len: {}) ===###===",
-                tick,
-                stack.len(),
-            );
+            // println!(
+            //     "\n===###=== stack at start of tick {}: (len: {}) ===###===",
+            //     tick,
+            //     stack.len(),
+            // );
             // println!("{:?}", &stack);
             // for each previous state:
             let mut next_stack = BinaryHeap::new();
@@ -265,9 +265,11 @@ pub fn day16(input: &str, part: Part) -> Solution {
                     );
                 }
                 */
-                // inspection of actual execution traces tells us that, past 2 million different
-                // strategies, the projected flow is one fourth the current max / best strategy
-                if iteration_counter > 2_000_000 {
+                // Inspection of actual execution traces tells us that, past 2 million different
+                // strategies, the projected flow is one fourth the current max / best strategy.
+                // Furthermore, limiting to 5 thousand gives the same result whilst taking a
+                // fraction of the time.
+                if iteration_counter > 5000 {
                     break;
                 }
                 greatest_total_flow_rate_found_so_far = previous_state
