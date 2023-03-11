@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Display, Formatter};
+use std::fs::File;
 use std::iter;
 
 use itertools::Itertools;
@@ -113,6 +114,7 @@ enum Jet {
 
 impl Display for Jet {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write;
         f.write_char(match self {
             Jet::Left => '<',
             Jet::Right => '>',
@@ -137,15 +139,55 @@ fn parse_jets(input: &str) -> Vec<Jet> {
 
 type Position = (i32, i32);
 
+fn write_map(
+    mut output_file: File,
+    map: &HashMap<Position, bool>,
+    falling_rock: (&Position, &Shape),
+    min_x: usize,
+    min_y: usize,
+    max_x: usize,
+    max_y: usize,
+) {
+    use std::io::Write;
+    let width = max_x - min_x;
+    let height = max_y - min_y;
+    let (bottom_left_corner, shape) = falling_rock;
+    output_file
+        .write_all(format!("P3\n{} {}\n255\n", width, height).as_bytes())
+        .unwrap();
+
+    for y in min_y..=(min_y + height) {
+        let line = (min_x..(min_x + width))
+            .map(|x| {
+                if shape
+                    .occupied_spaces(*bottom_left_corner)
+                    .contains(&(x as i32, y as i32))
+                {
+                    "242 211 191"
+                } else {
+                    match map.get(&(x as i32, y as i32)) {
+                        None => "51 51 51",
+                        Some(is_rock) => {
+                            if *is_rock {
+                                "112 128 144"
+                            } else {
+                                "0 0 0"
+                            }
+                        }
+                    }
+                }
+            })
+            .collect_vec();
+        output_file
+            .write_all((line.join(" ") + "\n").as_bytes())
+            .unwrap();
+    }
+}
+
 fn part1(input: &str) -> u32 {
-    const NUMBER_TO_FALL: usize = 2022;
+    // const NUMBER_TO_FALL: usize = 2022;
+    const NUMBER_TO_FALL: usize = 200;
     let jets = parse_jets(input);
-    // println!("{:?}", jets);
-    // let repeated = iter::repeat(jets.iter())
-    //     .flatten()
-    //     .take(100)
-    //     .map(|j| format!("{}", j))
-    //     .collect::<String>();
     let mut forever_jets = iter::repeat(jets.iter()).flatten();
     let rocks_to_fall = iter::repeat(SHAPE_ORDER.iter())
         .flatten()
@@ -156,6 +198,8 @@ fn part1(input: &str) -> u32 {
     for x in 0..=CHAMBER_WIDTH {
         tunnel_map.insert((x as i32, 0), true);
     }
+
+    let mut frame_index = 0;
     for rock in rocks_to_fall {
         println!("\n=#= Next Rock: {:?} =#=", rock);
         let top_of_stack = tunnel_map
@@ -168,12 +212,23 @@ fn part1(input: &str) -> u32 {
             top_of_stack + ROCK_STARTING_HEIGHT_OFFSET as i32 + 1,
         );
         loop {
-            let next_jet = forever_jets.next().unwrap();
-            println!("=== Next Jet: {} ===", next_jet);
-            println!(
-                "Before movement from jet: {:?}",
-                rock_bounding_box_bottom_left_position
+            let output_file =
+                File::create(format!("./output/frame{}.ppm", frame_index).as_str()).unwrap();
+            write_map(
+                output_file,
+                &tunnel_map,
+                (&rock_bounding_box_bottom_left_position, rock),
+                0,
+                0,
+                (CHAMBER_WIDTH) as usize,
+                330,
             );
+            let next_jet = forever_jets.next().unwrap();
+            // println!("=== Next Jet: {} ===", next_jet);
+            // println!(
+            //     "Before movement from jet: {:?}",
+            //     rock_bounding_box_bottom_left_position
+            // );
             match next_jet {
                 Jet::Left => {
                     rock_bounding_box_bottom_left_position.0 =
@@ -185,17 +240,18 @@ fn part1(input: &str) -> u32 {
                             .min((CHAMBER_WIDTH - rock.width()) as i32)
                 }
             }
-            println!(
-                "After movement from jet: {:?}",
-                rock_bounding_box_bottom_left_position
-            );
+            // println!(
+            //     "After movement from jet: {:?}",
+            //     rock_bounding_box_bottom_left_position
+            // );
             if rock
                 .spaces_below(rock_bounding_box_bottom_left_position)
                 .any(|position| *tunnel_map.get(&position).unwrap_or(&false))
             {
                 break;
             }
-            rock_bounding_box_bottom_left_position.1 -= 1
+            rock_bounding_box_bottom_left_position.1 -= 1;
+            frame_index += 1;
         }
         for position in rock.occupied_spaces(rock_bounding_box_bottom_left_position) {
             tunnel_map.insert(position, true);
