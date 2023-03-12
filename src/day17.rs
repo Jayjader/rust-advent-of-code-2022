@@ -197,7 +197,7 @@ fn part1(input: &str) -> u32 {
 
     let mut tunnel_map = HashMap::<Position, bool>::new();
     // fill in floor
-    for x in 0..=CHAMBER_WIDTH {
+    for x in 1..=(CHAMBER_WIDTH) {
         tunnel_map.insert((x as i32, 0), true);
     }
 
