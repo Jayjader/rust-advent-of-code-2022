@@ -149,17 +149,19 @@ fn write_map(
     max_y: usize,
 ) {
     use std::io::Write;
-    let width = max_x - min_x;
-    let height = max_y - min_y;
+    let width = max_x - min_x + 1;
+    let height = max_y - min_y + 1;
     let (bottom_left_corner, shape) = falling_rock;
     output_file
         .write_all(format!("P3\n{} {}\n255\n", width, height).as_bytes())
         .unwrap();
 
-    for y in min_y..=(min_y + height) {
-        let line = (min_x..(min_x + width))
+    for y in (min_y..=(max_y)).rev() {
+        let line = (min_x..=(max_x))
             .map(|x| {
-                if shape
+                if x == 0 || x == 8 || y == 0 {
+                    "0 0 110"
+                } else if shape
                     .occupied_spaces(*bottom_left_corner)
                     .contains(&(x as i32, y as i32))
                 {
@@ -220,7 +222,7 @@ fn part1(input: &str) -> u32 {
                 (&rock_bounding_box_bottom_left_position, rock),
                 0,
                 0,
-                (CHAMBER_WIDTH) as usize,
+                (CHAMBER_WIDTH + 1) as usize,
                 330,
             );
             let next_jet = forever_jets.next().unwrap();
