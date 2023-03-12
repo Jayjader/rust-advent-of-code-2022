@@ -187,8 +187,8 @@ fn write_map(
 }
 
 fn part1(input: &str) -> u32 {
-    // const NUMBER_TO_FALL: usize = 2022;
-    const NUMBER_TO_FALL: usize = 200;
+    const NUMBER_TO_FALL: usize = 2022;
+    // const NUMBER_TO_FALL: usize = 200;
     let jets = parse_jets(input);
     let mut forever_jets = iter::repeat(jets.iter()).flatten();
     let rocks_to_fall = iter::repeat(SHAPE_ORDER.iter())
@@ -231,16 +231,20 @@ fn part1(input: &str) -> u32 {
             //     "Before movement from jet: {:?}",
             //     rock_bounding_box_bottom_left_position
             // );
-            match next_jet {
-                Jet::Left => {
-                    rock_bounding_box_bottom_left_position.0 =
-                        (rock_bounding_box_bottom_left_position.0 - 1).max(0)
-                }
-                Jet::Right => {
-                    rock_bounding_box_bottom_left_position.0 =
-                        (rock_bounding_box_bottom_left_position.0 + 1)
-                            .min((CHAMBER_WIDTH - rock.width()) as i32)
-                }
+            let jet_x_movement = match next_jet {
+                Jet::Left => -1,
+                Jet::Right => 1,
+            };
+            let (current_x, current_y) = rock_bounding_box_bottom_left_position;
+            if rock
+                .occupied_spaces((current_x + jet_x_movement, current_y))
+                .all(|position| {
+                    position.0 <= CHAMBER_WIDTH as i32
+                        && position.0 > 0
+                        && !*tunnel_map.get(&position).unwrap_or(&false)
+                })
+            {
+                rock_bounding_box_bottom_left_position.0 += jet_x_movement;
             }
             // println!(
             //     "After movement from jet: {:?}",
