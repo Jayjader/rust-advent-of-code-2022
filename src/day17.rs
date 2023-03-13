@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
-use std::iter;
 
 use itertools::Itertools;
 
@@ -16,17 +15,6 @@ enum Shape {
     Square,
 }
 
-impl Shape {
-    const fn width(&self) -> u32 {
-        match self {
-            Shape::HorizontalLine => 4,
-            Shape::Cross => 3,
-            Shape::ReflectedL => 3,
-            Shape::VerticalLine => 4,
-            Shape::Square => 2,
-        }
-    }
-}
 impl Shape {
     fn spaces_below(
         &self,
@@ -190,10 +178,8 @@ fn part1(input: &str) -> u32 {
     const NUMBER_TO_FALL: usize = 2022;
     // const NUMBER_TO_FALL: usize = 200;
     let jets = parse_jets(input);
-    let mut forever_jets = iter::repeat(jets.iter()).flatten();
-    let rocks_to_fall = iter::repeat(SHAPE_ORDER.iter())
-        .flatten()
-        .take(NUMBER_TO_FALL);
+    let mut forever_jets = jets.iter().cycle();
+    let rocks_to_fall = SHAPE_ORDER.iter().cycle().take(NUMBER_TO_FALL);
 
     let mut tunnel_map = HashMap::<Position, bool>::new();
     // fill in floor
