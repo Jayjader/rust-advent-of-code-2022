@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Write};
 use std::fs::File;
 
 use itertools::Itertools;
@@ -102,7 +102,6 @@ enum Jet {
 
 impl Display for Jet {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        use std::fmt::Write;
         f.write_char(match self {
             Jet::Left => '<',
             Jet::Right => '>',
@@ -336,7 +335,8 @@ fn part2(input: &str) -> u64 {
         .map(|(rock, _)| rock);
 
     let mut highest_complete_line = 0u64;
-    #[derive(Debug)]
+
+    #[derive(Clone, Copy)]
     struct Line(u8);
     impl Line {
         pub fn at(&self, index: u8) -> bool {
@@ -366,7 +366,23 @@ fn part2(input: &str) -> u64 {
         }
     }
 
-    #[derive(Debug)]
+    impl Display for Line {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.write_char('|')?;
+            for i in 0..7 {
+                f.write_char(if self.at(i) { '#' } else { '.' })?;
+            }
+            f.write_char('|')
+        }
+    }
+
+    impl std::fmt::Debug for Line {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.write_str(format!("{}\t({:#010b})", self, self.0).as_str())
+        }
+    }
+
+    #[derive(Clone)]
     struct Map {
         lines: std::collections::VecDeque<Line>,
     }
@@ -380,22 +396,30 @@ fn part2(input: &str) -> u64 {
             } else if position.1 > (vertical_offset + self.lines.len() as u64) {
                 false
             } else {
-                // dbg!(
-                //     position,
-                //     vertical_offset,
-                //     &self.lines,
-                //     position.1 <= vertical_offset
-                // );
                 self.lines[(position.1 - vertical_offset - 1) as usize].at(position.0 as u8)
             }
         }
     }
+    impl Display for Map {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            f.write_str("     |       |\n")?;
+            for y in (0..self.lines.len()).rev() {
+                // self.lines[y].fmt(f)?;
+                f.write_str(format!("{:#02} - {:?}", y + 1, self.lines[y]).as_str())?;
+                f.write_char('\n')?;
+            }
+            f.write_str("00 - +-------+\n")?;
+            Ok(())
+        }
+    }
     impl Map {
+        /// Position for insertion *MUST* be already contained by map *OR* be adjacent to map contents
+        /// (i.e. ``1 <= insertion_y <= (map_max_y + 1)``. Inserting a position whose y-coordinate is
+        /// outside this range is **Undefined Behavior**.
         pub fn insert(&mut self, position: Position, vertical_offset: u64) {
             if self.lines.is_empty() || (position.1 > (vertical_offset + self.lines.len() as u64)) {
                 self.lines.push_back(Line(1 << position.0));
             } else {
-                // dbg!(position, vertical_offset, &self.lines);
                 self.lines[(position.1 - vertical_offset - 1) as usize].set(position.0 as u8);
             }
         }
@@ -411,7 +435,6 @@ fn part2(input: &str) -> u64 {
                 println!("culled {} lines", highest_full_line_index);
                 vertical_offset + highest_full_line_index as u64
             } else {
-                // dbg!(vertical_offset, &self.lines);
                 vertical_offset
             }
         }
@@ -422,25 +445,31 @@ fn part2(input: &str) -> u64 {
     let mut counter = 0u64;
     for rock in rocks_to_fall {
         counter += 1;
-        if (counter % 5_000) == 0 {
-            println!("{:?}", &tunnel_map);
+        if counter < 40 {
+            println!("{}", &tunnel_map);
+            println!("Next rock: {:?}", rock);
             dbg!(&tunnel_map.lines.len(), highest_complete_line);
+        } else {
+            break;
         }
         let top_of_stack = highest_complete_line + tunnel_map.lines.len() as u64;
         let mut rock_bounding_box_bottom_left_position = (
             ROCK_STARTING_LEFT_OFFSET as i32,                  // [-1, 7]
             top_of_stack + ROCK_STARTING_HEIGHT_OFFSET as u64, // [0, ?]
         );
+
+        print!("Jets: ");
         loop {
             let next_jet = forever_jets.next().unwrap();
+            print!("{}", &next_jet);
             let jet_x_movement = match next_jet {
                 Jet::Left => -1,
                 Jet::Right => 1,
             };
             let (current_x, current_y) = rock_bounding_box_bottom_left_position;
-            if rock
+            if !rock
                 .occupied_spaces_packed((current_x + jet_x_movement, current_y))
-                .all(|position| tunnel_map.at(position, highest_complete_line))
+                .any(|position| tunnel_map.at(position, highest_complete_line))
             {
                 rock_bounding_box_bottom_left_position.0 += jet_x_movement;
             }
@@ -452,9 +481,22 @@ fn part2(input: &str) -> u64 {
             }
             rock_bounding_box_bottom_left_position.1 -= 1;
         }
+        println!();
 
-        for position in rock.occupied_spaces_packed(rock_bounding_box_bottom_left_position) {
+        println!(
+            "rock stopped at {:?}",
+            &rock_bounding_box_bottom_left_position
+        );
+        println!("New solid tiles:");
+        for position in rock
+            .occupied_spaces_packed(rock_bounding_box_bottom_left_position)
+            // insertion must be on existing y or (highest_y + 1)
+            // sort by ascending y-coordinate to maintain ^this^ invariant
+            .sorted_by(|position_a, position_b| position_a.1.cmp(&position_b.1))
+        {
+            print!(" {:?} =>", position);
             tunnel_map.insert(position, highest_complete_line);
+            println!(" {:?}", tunnel_map.lines[(position.1 - 1) as usize]);
         }
         highest_complete_line = tunnel_map.cull(highest_complete_line);
     }
