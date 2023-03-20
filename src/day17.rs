@@ -336,7 +336,7 @@ fn part2(input: &str) -> u64 {
 
     let mut highest_complete_line = 0u64;
 
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, PartialEq)]
     struct Line(u8);
     impl Line {
         pub fn at(&self, index: u8) -> bool {
@@ -384,7 +384,7 @@ fn part2(input: &str) -> u64 {
 
     #[derive(Clone)]
     struct Map {
-        lines: std::collections::VecDeque<Line>,
+        lines: Vec<Line>,
     }
     impl Map {
         pub fn at(&self, position: Position, vertical_offset: u64) -> bool {
@@ -418,37 +418,37 @@ fn part2(input: &str) -> u64 {
         /// outside this range is **Undefined Behavior**.
         pub fn insert(&mut self, position: Position, vertical_offset: u64) {
             if self.lines.is_empty() || (position.1 > (vertical_offset + self.lines.len() as u64)) {
-                self.lines.push_back(Line(1 << position.0));
+                self.lines.push(Line(1 << position.0));
             } else {
                 self.lines[(position.1 - vertical_offset - 1) as usize].set(position.0 as u8);
             }
         }
     }
-    impl Map {
-        pub fn cull(&mut self, vertical_offset: u64) -> u64 {
-            if let Some(highest_full_line_index) =
-                self.lines.iter().position(|line| line.0 == 0b01111111)
-            {
-                for _ in 0..=highest_full_line_index {
-                    self.lines.pop_front();
+    /*    impl Map {
+            pub fn cull(&mut self, vertical_offset: u64) -> u64 {
+                if let Some(highest_full_line_index) =
+                    self.lines.iter().position(|line| line.0 == 0b01111111)
+                {
+                    for _ in 0..=highest_full_line_index {
+                        self.lines.pop_front();
+                    }
+                    println!("culled {} lines", highest_full_line_index);
+                    vertical_offset + highest_full_line_index as u64
+                } else {
+                    vertical_offset
                 }
-                println!("culled {} lines", highest_full_line_index);
-                vertical_offset + highest_full_line_index as u64
-            } else {
-                vertical_offset
             }
         }
-    }
-    let mut tunnel_map = Map {
-        lines: std::collections::VecDeque::new(),
-    };
+    */
+    let mut tunnel_map = Map { lines: Vec::new() };
     let mut counter = 0u64;
+    let mut window_length = 0;
     for rock in rocks_to_fall {
         counter += 1;
+        // println!("{}", &tunnel_map);
         if counter < 40 {
-            println!("{}", &tunnel_map);
-            println!("Next rock: {:?}", rock);
-            dbg!(&tunnel_map.lines.len(), highest_complete_line);
+            // println!("Next rock: {:?}", rock);
+            dbg!(&tunnel_map.lines.len());
         } else {
             break;
         }
@@ -458,10 +458,10 @@ fn part2(input: &str) -> u64 {
             top_of_stack + ROCK_STARTING_HEIGHT_OFFSET as u64, // [0, ?]
         );
 
-        print!("Jets: ");
+        // print!("Jets: ");
         loop {
             let next_jet = forever_jets.next().unwrap();
-            print!("{}", &next_jet);
+            // print!("{}", &next_jet);
             let jet_x_movement = match next_jet {
                 Jet::Left => -1,
                 Jet::Right => 1,
@@ -481,24 +481,79 @@ fn part2(input: &str) -> u64 {
             }
             rock_bounding_box_bottom_left_position.1 -= 1;
         }
-        println!();
+        // println!();
 
-        println!(
-            "rock stopped at {:?}",
-            &rock_bounding_box_bottom_left_position
-        );
-        println!("New solid tiles:");
+        /*        println!(
+                    "rock stopped at {:?}",
+                    &rock_bounding_box_bottom_left_position
+                );
+        */
+        // println!("New solid tiles:");
         for position in rock
             .occupied_spaces_packed(rock_bounding_box_bottom_left_position)
             // insertion must be on existing y or (highest_y + 1)
             // sort by ascending y-coordinate to maintain ^this^ invariant
             .sorted_by(|position_a, position_b| position_a.1.cmp(&position_b.1))
         {
-            print!(" {:?} =>", position);
+            // print!(" {:?} =>", position);
             tunnel_map.insert(position, highest_complete_line);
-            println!(" {:?}", tunnel_map.lines[(position.1 - 1) as usize]);
+            // println!(" {:?}", tunnel_map.lines[(position.1 - 1) as usize]);
         }
-        highest_complete_line = tunnel_map.cull(highest_complete_line);
+        // highest_complete_line = tunnel_map.cull(highest_complete_line);
+
+        // watch for emergent repeating window in lines
+        // scan from back/top, and be prepared for the last/bottom-most lines to be
+        // erroneous (i.e. for the repetition to only start after 1 window-length)
+
+        if tunnel_map.lines.len() > 2 {
+            let len = tunnel_map.lines.len();
+            for window_length in (2..(len / 2 + 1)).rev() {
+                let second_window_end_index = len - 1;
+                let second_window_start_index = second_window_end_index + 1 - window_length;
+                let first_window_end_index = second_window_start_index - 1;
+                let first_window_start_index = first_window_end_index + 1 - window_length;
+                let current = &tunnel_map.lines.as_slice()
+                    [second_window_start_index..=second_window_end_index];
+                let previous =
+                    &tunnel_map.lines.as_slice()[first_window_start_index..=first_window_end_index];
+                if current
+                    .iter()
+                    .enumerate()
+                    .all(|(index, line)| previous[index] == *line)
+                {
+                    println!(
+                        "window length {} detected with total length {}",
+                        window_length,
+                        tunnel_map.lines.len()
+                    );
+                    println!("{} rocks fallen", counter);
+                    println!("=======\n{:?}\n{:?}\n======", current, previous);
+                }
+            }
+        }
+
+        /*        for n in 2..(tunnel_map.lines.len() / 2 + 1) {
+                    let match_start = tunnel_map.lines.windows(n).position(|window| {
+                        let mut chunks = window.chunks_exact(n / 2);
+                        let first = chunks.next().unwrap();
+                        let second = chunks.next().unwrap();
+                        let mut matches = true;
+                        for i in 0..first.len() {
+                            matches = matches && (first[i] == second[i]);
+                        }
+                        matches
+                    });
+                    if let Some(index) = match_start {
+                        println!(
+                            "found match start at {} for window length {} after {} rocks",
+                            index + 1,
+                            n,
+                            counter
+                        );
+                        break;
+                    }
+                }
+        */
     }
     // let mut tunnel_map = HashMap<Position, bool>
 
